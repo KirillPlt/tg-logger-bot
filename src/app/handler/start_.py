@@ -11,8 +11,8 @@ async def start_handler(
         shifted_log_chat_id: int
 ) -> None:
 
-    chat_permalink: str = f"https://t.me/c/{shifted_chat_id}"
-    log_chat_permalink: str = f"https://t.me/c/{shifted_log_chat_id}"
+    chat_permalink: str = f"tg://chat?id={shifted_chat_id}"
+    log_chat_permalink: str = f"tg://chat?id={shifted_log_chat_id}"
 
     await message.answer(
         text="Приветствую! Я - логгер.\n\n"

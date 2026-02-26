@@ -8,14 +8,15 @@ from aiogram.client.default import DefaultBotProperties
 from app.utils import shifted_id
 
 
-load_dotenv(dotenv_path='.botenv')
+load_dotenv(dotenv_path='.env')
 
 
-# --------- Getter .botenv
+# --------- Getter .env
 BOT_TOKEN = str(os.getenv("BOT_TOKEN"))
-print(BOT_TOKEN)
-CHAT_ID: Final[str] = os.getenv("CHAT_ID", 0)
-LOG_CHAT_ID: Final[str] = os.getenv("MANAGER_IDS", "")
+CHAT_ID: Final[str] = os.getenv("CHAT_ID", "")
+LOG_CHAT_ID: Final[str] = os.getenv("LOG_CHAT_ID", "0")
+print(LOG_CHAT_ID)
+print(CHAT_ID)
 
 
 # --------- Bot config
@@ -24,7 +25,7 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode='html')
 )
 
-#xyi
+# xyi
 # --------- Chat data | Const
-SHIFTED_CHAT_ID: Final[int] = shifted_id(CHAT_ID)
-SHIFTED_LOG_CHAT_ID: Final[int] = shifted_id(LOG_CHAT_ID)
+SHIFTED_CHAT_ID: Final[int] = shifted_id(int(CHAT_ID))
+SHIFTED_LOG_CHAT_ID: Final[int] = shifted_id(int(LOG_CHAT_ID))

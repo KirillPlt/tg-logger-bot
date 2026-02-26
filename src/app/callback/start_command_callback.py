@@ -14,4 +14,4 @@ rt = Router()
 )
 async def start_callback(c: types.CallbackQuery) -> None:
     await c.answer()
-    await c.message.edit_text("🎾 Понг!")
+    await c.message.answer("🎾 Понг!")
