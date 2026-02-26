@@ -24,6 +24,7 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode='html')
 )
 
+#xyi
 # --------- Chat data | Const
 SHIFTED_CHAT_ID: Final[int] = shifted_id(CHAT_ID)
 SHIFTED_LOG_CHAT_ID: Final[int] = shifted_id(LOG_CHAT_ID)
