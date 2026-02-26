@@ -1,14 +1,20 @@
 from aiogram import Router, F
-from aiogram.types import Message, ChatMemberUpdated, User
+from aiogram.types import Message, ChatMemberUpdated, User, ErrorEvent
 from aiogram.filters import ChatMemberUpdatedFilter, RESTRICTED, IS_MEMBER, KICKED, LEFT
 
+from app.logger import get_logger
 from app.time_handler.time_now import get_time_now
 
 rt = Router()
+logger = get_logger()
 
 USER_KICKED_TRANSITION = (IS_MEMBER >> (KICKED | -RESTRICTED))
 USER_LEFT_TRANSITION = (IS_MEMBER >> LEFT)
 
+
+@rt.error()
+async def error_handler(error: ErrorEvent):
+    await logger.aexception("Telegram error", exception=error.exception)
 
 # Пользователь покинул чат
 @rt.chat_member(ChatMemberUpdatedFilter(USER_LEFT_TRANSITION))

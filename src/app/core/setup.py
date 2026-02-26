@@ -6,7 +6,7 @@ from app.bot_config.config import bot, CHAT_ID, SHIFTED_CHAT_ID, LOG_CHAT_ID, SH
 from app.callback import start_command_callback
 from app.handler import events
 from app.handler.start_ import dp
-
+from app.logger import IwfLogger
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,4 +24,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
+    IwfLogger.setup("DEBUG")
     asyncio.run(main())
