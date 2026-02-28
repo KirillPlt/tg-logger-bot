@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Union
 
 from aiogram import types
 from aiogram.filters import BaseFilter
@@ -14,3 +13,11 @@ class ChatTypeFilter(BaseFilter):
         if isinstance(event, types.CallbackQuery):
             return event.message.chat.type in self.chat_type
         return event.chat.type in self.chat_type
+
+
+class ChatId(BaseFilter):
+    def __init__(self, chat_id: int):
+        self.chat_id = chat_id
+
+    async def __call__(self, message: types.Message) -> bool:
+        return message.chat.id == self.chat_id

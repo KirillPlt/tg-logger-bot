@@ -9,7 +9,7 @@ rt = Router()
 
 
 @rt.callback_query(
-    CallbackFilter(message="ping"),
+    CallbackFilter(data="ping"),
     ChatTypeFilter([ChatType.PRIVATE])
 )
 async def start_callback(c: types.CallbackQuery) -> None:
