@@ -1,4 +1,3 @@
-
 def shifted_id(native_chat_id: int) -> int:
     short_id = str(native_chat_id).replace("-100", "")
     shift = int(-1 * pow(10, len(short_id) + 2))
@@ -7,6 +6,14 @@ def shifted_id(native_chat_id: int) -> int:
 
 def text_size_bytes(text: str, encoding: str = "utf-8") -> int:
     return len(text.encode(encoding))
+
+
+def format_rights(member, rights_map: dict) -> str:
+    lines = []
+    for i, (attr, title) in enumerate(rights_map.items(), 1):
+        value = getattr(member, attr, False)
+        lines.append(f"{i}. {title} {'✅' if value else '❌'}")
+    return "\n".join(lines)
 
 
 def user_rules_analysis(old: list[bool], new: list[bool]) -> str:
@@ -20,6 +27,9 @@ def user_rules_analysis(old: list[bool], new: list[bool]) -> str:
         "Может отправлять видео-кружочки",
         "Может отправлять видео",
         "Может отправлять ГС",
+        "Может добавлять пользователей в чат",
+        "Может закреплять сообщения",
+        "Может изменять информацию группы"
     ]
 
     result: list[str] = []
