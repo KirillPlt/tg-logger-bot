@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import Router, F, Bot
 from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, ChatMemberAdministrator, ChatMember
 from aiogram.filters import ChatMemberUpdatedFilter, RESTRICTED, IS_MEMBER, KICKED, LEFT, ADMINISTRATOR, IS_NOT_MEMBER
@@ -126,21 +128,12 @@ async def join_user_event(event: ChatMemberUpdated, log_chat_id: int, event_from
 # Пользователь изменил сообщение
 @rt.edited_message()
 async def edit_message_event(event: Message, log_chat_id: int) -> None:
-    attrs_error_message = [
-        "message_id",
-        "message"
-    ]
-
-    attr_message_id_info = "message_id = " + str(attrs_error_message[0].replace(" ", "\n"))
-    attr_message_info = "message = " + str(attrs_error_message[1].replace(" ", "\n"))
-
-
     await event.bot.send_message(
         chat_id=log_chat_id,
         text=f"🕒 <b>{ get_time_now().strftime("%d.%m.%Y | %H:%M") }</b>\n"
              f"Пользователь { event.from_user.mention_html() }{ f"[@{ event.from_user.username }]" if event.from_user.username else "" } изменил сообщение.\n"
              f"<b>#ИЗМЕНИЛ_СООБЩЕНИЕ_{ event.from_user.id }</b>\n"
-             f"{ "Новое сообщение: " if event.text else "⚠️ DEV Info:" }"
+             f"{ "Новое сообщение: " if event.text else "⚠️ Dev Info: Апдейт message.text вернул None. Вся информация лежит в логгах бота." }"
     )
 
     if event.text:
@@ -148,12 +141,9 @@ async def edit_message_event(event: Message, log_chat_id: int) -> None:
             chat_id=log_chat_id,
             text=f"{event.text}"
         )
+        return
 
-    await event.bot.send_message(
-        chat_id=log_chat_id,
-        text="⚠️ Dev Info: Данных, к сожалению, нет. Апдейт message.text вернул None.\n"
-        f"<blockquote expandable>{attr_message_id_info}{attr_message_info}</blockquote>"
-    )
+    logging.warning("Message.text вернул None", event)
 
 
 # Пользователю изменили права

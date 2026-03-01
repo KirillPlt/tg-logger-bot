@@ -8,7 +8,7 @@ from app.handler import events
 from app.handler.start_ import dp
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.NOTSET)
 
 
 async def main() -> None:
