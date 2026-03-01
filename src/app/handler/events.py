@@ -1,7 +1,9 @@
 import logging
+from typing import Any
 
 from aiogram import Router, F, Bot
-from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, ChatMemberAdministrator, ChatMember
+from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, ChatMemberAdministrator, ChatMember, \
+    ChatMemberMember, ChatMemberRestricted
 from aiogram.filters import ChatMemberUpdatedFilter, RESTRICTED, IS_MEMBER, KICKED, LEFT, ADMINISTRATOR, IS_NOT_MEMBER
 
 from app.bot_config.config import CHAT_ID, LOG_CHAT_ID
@@ -46,9 +48,7 @@ RESTRICTED_RIGHTS = {
     "can_send_documents": "Документы",
     "can_send_polls": "Опросы",
     "can_send_other_messages": "Стикеры / GIF",
-    "can_invite_users": "Приглашать пользователей",
-    "can_pin_messages": "Закреплять сообщения",
-    "can_change_info": "Менять информацию",
+    "can_invite_users": "Приглашение пользователей"
 }
 
 
@@ -151,7 +151,8 @@ async def edit_message_event(event: Message, log_chat_id: int) -> None:
 async def restricted_user_event(event: ChatMemberUpdated, log_chat_id: int):
     old = event.old_chat_member
     new = event.new_chat_member
-    rights_text: str = ""
+
+    is_admin_restricted: bool = False
 
     changes = []
 
@@ -162,15 +163,22 @@ async def restricted_user_event(event: ChatMemberUpdated, log_chat_id: int):
 
             if old_val == new_val:
                 changes.append(
-                    f"{title}: {'✅' if new_val else '❌'}\n"
+                    f"{title}: {'✅' if new_val else '❌'}"
                 )
             else:
                 changes.append(
-                    f"{title}: {'✅' if old_val else '❌'} → {'✅' if new_val else '❌'}\n"
+                    f"{title}: {'✅' if old_val else '❌'} → {'✅' if new_val else '❌'}"
                 )
 
         except AttributeError:
-            rights_text = format_rights(new, ADMIN_RIGHTS)
+            new_val = getattr(new, attr)
+
+            changes.append(
+                f"{title}: {'✅' if new_val else '✅ → ❌'}"
+            )
+            is_admin_restricted = True
+
+
     user = new.user
 
     await event.bot.send_message(
@@ -179,7 +187,8 @@ async def restricted_user_event(event: ChatMemberUpdated, log_chat_id: int):
             f"🕒 <b>{get_time_now().strftime('%d.%m.%Y | %H:%M')}</b>\n"
             f"Пользователю {user.mention_html()}"
             f"{f' [@{user.username}]' if user.username else ''}\n"
-            f"<b>изменили права:</b>\n\n {'\n'.join(changes) if changes else rights_text}"
+            f"<b>{"изменили права" if not is_admin_restricted else "Сняли права администратора и изменили права пользователя"}:</b>\n\n"
+            f"{'\n'.join(changes)}"
             f"<b>#ИЗМЕНИЛИ_ПРАВА_{new.user.id}</b>"
         )
     )
@@ -196,7 +205,7 @@ async def user_join_in_log_chat(request: ChatJoinRequest, bot: Bot):
     await request.decline()
 
 
-# Пользователю изменили права администратора
+# Пользователю изменили права  или права администратора
 @rt.chat_member()
 async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
     new = event.new_chat_member
@@ -204,7 +213,7 @@ async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
     if new.status != "administrator":
         return
 
-    rights_text = format_rights(new, ADMIN_RIGHTS)
+    admin_rights_text = format_rights(new, ADMIN_RIGHTS)
     user = new.user
 
     await event.bot.send_message(
@@ -214,7 +223,7 @@ async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
             f"Пользователю {user.mention_html()}"
             f"{f' [@{user.username}]' if user.username else ''}\n"
             f"выдали <b>права администратора</b>:\n\n"
-            f"{rights_text}"
+            f"{admin_rights_text}\n"
             f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА_{user.id}</b>"
         )
     )
