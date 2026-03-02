@@ -1,16 +1,15 @@
 import logging
-from typing import Any
 
 from aiogram import Router, F, Bot
-from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, ChatMemberAdministrator, ChatMember, \
-    ChatMemberMember, ChatMemberRestricted
+from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import ChatMemberUpdatedFilter, RESTRICTED, IS_MEMBER, KICKED, LEFT, ADMINISTRATOR, IS_NOT_MEMBER
 
 from app.bot_config.config import CHAT_ID, LOG_CHAT_ID
-from app.filter.user import UserOnlyAdded, UserNotAdded, IsAdmin
+from app.filter.user import UserOnlyAdded, UserNotAdded
 from app.filter.chat import ChatId
 from app.time_handler.time_now import get_time_now
 from app.utils import format_rights
+
 
 ChatIdFilter = ChatId(int(CHAT_ID))
 LogChatIdFilter = ChatId(int(LOG_CHAT_ID))
@@ -58,9 +57,6 @@ async def left_user_event(
     event: ChatMemberUpdated,
     log_chat_id: int,
 ) -> None:
-
-    print(event.from_user.id)
-
     await event.bot.send_message(
         chat_id=log_chat_id,
         text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n"
@@ -205,7 +201,7 @@ async def user_join_in_log_chat(request: ChatJoinRequest, bot: Bot):
     await request.decline()
 
 
-# Пользователю изменили права  или права администратора
+# Пользователю изменили права или права администратора
 @rt.chat_member()
 async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
     new = event.new_chat_member
@@ -225,5 +221,17 @@ async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
             f"выдали <b>права администратора</b>:\n\n"
             f"{admin_rights_text}\n"
             f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА_{user.id}</b>"
+        )
+    )
+
+    await event.bot.send_message(
+        chat_id=CHAT_ID,
+        text=f"✉️ {user.mention_html()}, так как тебя назначили администратором, просим тебя вступить в наши чаты "
+             f"доступным только нашей администрации: ",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="⚙️ Лог чат", url="https://t.me/+gPmxiepnJWFhMjAy")],
+                [InlineKeyboardButton(text="🛡 Инфо-админ", url="https://t.me/+eDiObhj7a6wyZGU6")]
+            ]
         )
     )

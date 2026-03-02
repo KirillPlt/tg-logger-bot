@@ -21,12 +21,14 @@ async def start_handler(
     msg = await message.answer(
         text="⚠️ Администрация чата, просим вас вступить в логгер-чат для удобства отчетов о группе.\n"
              "Вход доступен только для администрации чата, поэтому иные пользователи не пройдут проверку и бот не пропустит "
-             "в логгер-чат посторонних.\n\n"
+             "в логгер-чат посторонних.\n"
+             "Так же здесь имеется информационный чат для администрации. Вход так же доступен <b>только</b> для админов.\n\n"
              "ℹ️ Информация:",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="💬 Чат", url=chat_permalink)],
                 [InlineKeyboardButton(text="⚙️ Лог чат", url="https://t.me/+gPmxiepnJWFhMjAy")],
+                [InlineKeyboardButton(text="🛡 Инфо-админ", url="https://t.me/+eDiObhj7a6wyZGU6")]
             ]
         )
     )
