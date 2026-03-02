@@ -13,6 +13,7 @@ from app.bot_config.settings import settings
 BOT_TOKEN: Final[str] = settings.bot.token.get_secret_value()
 CHAT_ID: Final[int] = settings.bot.chat_id
 LOG_CHAT_ID: Final[int] = settings.bot.log_chat_id
+INFO_CHAT_ADMIN_ID: Final[int] = settings.bot.info_chat_admin_id
 
 
 # --------- Bot config

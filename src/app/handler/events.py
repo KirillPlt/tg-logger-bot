@@ -4,7 +4,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, ChatMemberUpdated, User, ChatJoinRequest, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import ChatMemberUpdatedFilter, RESTRICTED, IS_MEMBER, KICKED, LEFT, ADMINISTRATOR, IS_NOT_MEMBER
 
-from app.bot_config.config import CHAT_ID, LOG_CHAT_ID
+from app.bot_config.config import CHAT_ID, LOG_CHAT_ID, INFO_CHAT_ADMIN_ID
 from app.filter.user import UserOnlyAdded, UserNotAdded
 from app.filter.chat import ChatId
 from app.time_handler.time_now import get_time_now
@@ -13,6 +13,7 @@ from app.utils import format_rights
 
 ChatIdFilter = ChatId(int(CHAT_ID))
 LogChatIdFilter = ChatId(int(LOG_CHAT_ID))
+InfoChatAdminFilter = ChatId(int(INFO_CHAT_ADMIN_ID))
 
 rt = Router()
 rt.chat_member.filter(ChatIdFilter)
@@ -188,6 +189,18 @@ async def restricted_user_event(event: ChatMemberUpdated, log_chat_id: int):
             f"<b>#ИЗМЕНИЛИ_ПРАВА_{new.user.id}</b>"
         )
     )
+
+
+# Пользователь заходит в админский чат
+@rt.chat_join_request(InfoChatAdminFilter)
+async def user_join_in_admin_chat(request: ChatJoinRequest, bot: Bot):
+    admins = await bot.get_chat_administrators(int(CHAT_ID))
+    for admin in admins:
+        if request.from_user.id == admin.user.id:
+            await request.approve()
+            return
+    await request.decline()
+
 
 
 # Пользователь заходит в лог-чат
