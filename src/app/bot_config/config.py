@@ -1,23 +1,18 @@
-import os
-from enum import StrEnum
 from typing import Final
 
 from aiogram.enums import ParseMode
-from dotenv import load_dotenv
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 
 from app.utils import shifted_id
+from app.bot_config.settings import settings
 
-
-if not load_dotenv(dotenv_path='.env'):
-    raise RuntimeError(".env file not loaded")
 
 
 # --------- Getter .env
-BOT_TOKEN = str(os.getenv("BOT_TOKEN"))
-CHAT_ID: Final[str] = os.getenv("CHAT_ID", "")
-LOG_CHAT_ID: Final[str] = os.getenv("LOG_CHAT_ID", "0")
+BOT_TOKEN: Final[str] = settings.bot.token.get_secret_value()
+CHAT_ID: Final[int] = settings.bot.chat_id
+LOG_CHAT_ID: Final[int] = settings.bot.log_chat_id
 
 
 # --------- Bot config
@@ -28,5 +23,5 @@ bot = Bot(
 
 
 # --------- Chat data | Const
-SHIFTED_CHAT_ID: Final[int] = shifted_id(int(CHAT_ID))
-SHIFTED_LOG_CHAT_ID: Final[int] = shifted_id(int(LOG_CHAT_ID))
+SHIFTED_CHAT_ID: Final[int] = shifted_id(CHAT_ID)
+SHIFTED_LOG_CHAT_ID: Final[int] = shifted_id(LOG_CHAT_ID)
