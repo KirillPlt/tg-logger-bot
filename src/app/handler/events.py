@@ -125,6 +125,9 @@ async def join_user_event(event: ChatMemberUpdated, log_chat_id: int, event_from
 # Пользователь изменил сообщение
 @rt.edited_message()
 async def edit_message_event(event: Message, log_chat_id: int) -> None:
+    if not event.text:
+        return
+
     await event.bot.send_message(
         chat_id=log_chat_id,
         text=f"🕒 <b>{ get_time_now().strftime("%d.%m.%Y | %H:%M") }</b>\n"
