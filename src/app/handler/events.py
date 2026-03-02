@@ -125,7 +125,7 @@ async def join_user_event(event: ChatMemberUpdated, log_chat_id: int, event_from
 # Пользователь изменил сообщение
 @rt.edited_message()
 async def edit_message_event(event: Message, log_chat_id: int) -> None:
-    if not event.text:
+    if event.react:
         return
 
     await event.bot.send_message(
