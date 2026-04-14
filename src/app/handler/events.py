@@ -54,16 +54,16 @@ RESTRICTED_RIGHTS = {
 
 # Пользователь покинул чат
 @rt.chat_member(ChatMemberUpdatedFilter(USER_LEFT_TRANSITION))
-async def left_user_event(
-    event: ChatMemberUpdated,
-    log_chat_id: int,
-) -> None:
+async def left_user_event(event: ChatMemberUpdated,log_chat_id: int) -> None:
+    username: str = f"[@{event.from_user.username}]" if event.from_user.username else ""
+    
     await event.bot.send_message(
         chat_id=log_chat_id,
-        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n"
+        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n\n"
              f"🚪 Пользователь {event.from_user.mention_html()}"
-             f"{f"[@{event.from_user.username}]" if event.from_user.username else ""} покинул группу.\n"
-             f"<b>#ПОКИНУЛ_ГРУППУ_{event.from_user.id}</b>",
+             f"{username} покинул группу.\n\n"
+             f"<b>#ПОКИНУЛ_ГРУППУ</b>\n"
+             f"#id{event.from_user.id}",
     )
 
 
@@ -74,15 +74,17 @@ async def admin_kick_user_event(
     log_chat_id: int,
     event_from_user: User | None
 ) -> None:
-
+    user_username: str = f"[@{event.new_chat_member.user.username}]" if event.new_chat_member.user.username else ""
+    admin_username: str = f"[@{event_from_user.username}]" if event_from_user.username else ""
+    
     await event.bot.send_message(
         chat_id=log_chat_id,
-        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n"
-             f"🚪 Пользователя {event.new_chat_member.user.mention_html()}"
-             f"{f"[@{event.new_chat_member.user.username}]" if event.new_chat_member.user.username else ""} "
-             f"<b>исключил из чата администратор</b> {event_from_user.mention_html()}"
-             f"{f"[@{event_from_user.username}]" if event_from_user.username else ""}\n"
-             f"<b>#АДМИН_{event_from_user.id}_ИСКЛЮЧИЛ_ИЗ_ГРУППЫ_{event.new_chat_member.user.id}</b>",
+        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n\n"
+             f"🚪 Пользователя {event.new_chat_member.user.mention_html()}{user_username} "
+             f"<b>исключил из чата администратор</b> {event_from_user.mention_html()}{admin_username}\n\n"
+             f"<b>#АДМИН_ИСКЛЮЧИЛ_ИЗ_ГРУППЫ</b>\n"
+             f"Админ: #id{event_from_user.id}\n"
+             f"Исключил: #id{event.new_chat_member.user.id}",
     )
 
 
@@ -95,30 +97,48 @@ async def user_add_user_event(message: Message, log_chat_id: int) -> None:
 
     for user in message.new_chat_members[0:-1]:
         message_answer += f"{user_count}. {user.mention_html()},\n"
-        user_ids += (str(user.id) + "_")
+        user_ids += (str(user.id) + "\n#")
         user_count += 1
     else:
         message_answer += f"{user_count}. {message.new_chat_members[-1].mention_html()}."
         user_ids += (str(message.new_chat_members[-1].id))
-
+    
+    username: str = f"[@{message.from_user.username}]" if message.from_user.username else ""
+    
     await message.bot.send_message(
         chat_id=log_chat_id,
-        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n"
+        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n\n"
              f"🎉 Пользователь {message.from_user.mention_html()}"
-             f"{f"[@{message.from_user.username}]" if message.from_user.username else ""} добавил в группу:\n"
-             f"{message_answer}\n"
-             f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ_{user_ids}</b>",
+             f"{username} добавил в группу:\n"
+             f"{message_answer}\n\n"
+             f'<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>\n'
+             f'#id{user_ids}',
     )
 
 
 # Пользователь присоединился к чату
 @rt.chat_member(ChatMemberUpdatedFilter((KICKED | LEFT) >> IS_MEMBER), UserNotAdded())
-async def join_user_event(event: ChatMemberUpdated, log_chat_id: int, event_from_user: User | None) -> None:
+async def on_user_joined(
+    event: ChatMemberUpdated,
+    log_chat_id: int,
+    event_from_user: User | None,
+) -> None:
+    if event_from_user is None:
+        return
+
+    current_time = get_time_now().strftime('%d.%m.%Y | %H:%M')
+    username = f' [@{event_from_user.username}]' if event_from_user.username else ''
+
+    text = (
+        f'🕒 <b>{current_time}</b>\n\n'
+        f'🎉 Пользователь {event_from_user.mention_html()}{username} присоединился в группу.\n\n'
+        f'<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>\n'
+        f'#id{event_from_user.id}'
+    )
+
     await event.bot.send_message(
         chat_id=log_chat_id,
-        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n"
-             f"🎉 Пользователь {event_from_user.mention_html()}{f"[@{event_from_user.username}]" if event_from_user.username else ""} присоеденился в группу.\n"
-             f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ_{event_from_user.id}<b/>",
+        text=text,
     )
 
 
@@ -127,13 +147,17 @@ async def join_user_event(event: ChatMemberUpdated, log_chat_id: int, event_from
 async def edit_message_event(event: Message, log_chat_id: int) -> None:
     if event.react:
         return
-
+    
+    message: str = "Новое сообщение: " if event.text else "⚠️ Dev Info: Апдейт message.text вернул None. Вся информация лежит в логгах бота."
+    username: str = f"[@{ event.from_user.username }]" if event.from_user.username else ""
+    
     await event.bot.send_message(
         chat_id=log_chat_id,
-        text=f"🕒 <b>{ get_time_now().strftime("%d.%m.%Y | %H:%M") }</b>\n"
-             f"Пользователь { event.from_user.mention_html() }{ f"[@{ event.from_user.username }]" if event.from_user.username else "" } изменил сообщение.\n"
-             f"<b>#ИЗМЕНИЛ_СООБЩЕНИЕ_{ event.from_user.id }</b>\n"
-             f"{ "Новое сообщение: " if event.text else "⚠️ Dev Info: Апдейт message.text вернул None. Вся информация лежит в логгах бота." }"
+        text=f"🕒 <b>{get_time_now().strftime("%d.%m.%Y | %H:%M")}</b>\n\n"
+             f"Пользователь {event.from_user.mention_html()}{username} изменил сообщение.\n\n"
+             f"<b>#ИЗМЕНИЛ_СООБЩЕНИЕ</b>\n"
+             f"#id{event.from_user.id}\n"
+             f"{message}"
     )
 
     if event.text:
@@ -180,16 +204,19 @@ async def restricted_user_event(event: ChatMemberUpdated, log_chat_id: int):
 
 
     user = new.user
-
+    username: str = f' [@{user.username}]' if user.username else ''
+    rules_part: str = "изменили права" if not is_admin_restricted else "Сняли права администратора и изменили права пользователя"
+    
     await event.bot.send_message(
         chat_id=log_chat_id,
         text=(
-            f"🕒 <b>{get_time_now().strftime('%d.%m.%Y | %H:%M')}</b>\n"
+            f"🕒 <b>{get_time_now().strftime('%d.%m.%Y | %H:%M')}</b>\n\n"
             f"Пользователю {user.mention_html()}"
-            f"{f' [@{user.username}]' if user.username else ''}\n"
-            f"<b>{"изменили права" if not is_admin_restricted else "Сняли права администратора и изменили права пользователя"}:</b>\n\n"
-            f"{'\n'.join(changes)}"
-            f"<b>#ИЗМЕНИЛИ_ПРАВА_{new.user.id}</b>"
+            f"{username}\n"
+            f"<b>{rules_part}:</b>\n\n"
+            f"{'\n'.join(changes)}\n"
+            f"<b>#ИЗМЕНИЛИ_ПРАВА</b>\n"
+            f"#id{new.user.id}"
         )
     )
 
@@ -227,22 +254,25 @@ async def admin_promoted(event: ChatMemberUpdated, log_chat_id: int):
 
     admin_rights_text = format_rights(new, ADMIN_RIGHTS)
     user = new.user
+    username: str = f' [@{user.username}]' if user.username else ''
 
     await event.bot.send_message(
         chat_id=log_chat_id,
         text=(
-            f"🕒 <b>{get_time_now().strftime('%d.%m.%Y | %H:%M')}</b>\n"
+            f"🕒 <b>{get_time_now().strftime('%d.%m.%Y | %H:%M')}</b>\n\n"
             f"Пользователю {user.mention_html()}"
-            f"{f' [@{user.username}]' if user.username else ''}\n"
+            f"{username}\n"
             f"выдали <b>права администратора</b>:\n\n"
-            f"{admin_rights_text}\n"
-            f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА_{user.id}</b>"
+            f"{admin_rights_text}\n\n"
+            f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА</b>\n"
+            f"#id{user.id}"
         )
     )
 
     await event.bot.send_message(
         chat_id=CHAT_ID,
-        text=f"✉️ {user.mention_html()}, так как тебя назначили администратором, просим тебя вступить в наши чаты "
+        text=f"✉️ {user.mention_html()}, так как тебя назначили администратором, "
+             f"просим тебя вступить в наши чаты "
              f"доступным только нашей администрации: ",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[

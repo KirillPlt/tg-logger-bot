@@ -18,6 +18,7 @@ description = "Checking log from chat."
 requires-python = ">=3.13"
 dependencies = [
     "aiogram>=3.24.0",
+    "aiosqlite>=0.22.1",
     "better-exceptions>=0.3.3",
     "colorama>=0.4.6",
     "ecs-logging>=2.3.0",
