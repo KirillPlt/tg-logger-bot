@@ -21,6 +21,24 @@ rt = Router()
 
 
 @rt.message(
+    ArgMessage("+команда"),
+    IsCreator(),
+    ChatTypeFilter(
+        chat_type=[
+            ChatType.PRIVATE,
+            ChatType.GROUP,
+            ChatType.SUPERGROUP,
+        ],
+    ),
+)
+async def set_custom_command_handler(message: Message, arg1: str, arg2: str) -> None:
+    await save_custom_command(arg1, arg2)
+
+    await message.answer(f"Команда {arg1} успешно создана!")
+    await message.answer(f"Ваш текст:\n{arg2}")
+
+
+@rt.message(
     GetCustomCommand(),
     ChatTypeFilter(
         chat_type=[
