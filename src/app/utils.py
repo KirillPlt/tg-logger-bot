@@ -29,7 +29,7 @@ def user_rules_analysis(old: list[bool], new: list[bool]) -> str:
         "Может отправлять ГС",
         "Может добавлять пользователей в чат",
         "Может закреплять сообщения",
-        "Может изменять информацию группы"
+        "Может изменять информацию группы",
     ]
 
     result: list[str] = []
@@ -44,4 +44,3 @@ def user_rules_analysis(old: list[bool], new: list[bool]) -> str:
             result.append(f"Не {rules[i][0].lower()}{rules[i][1:]}")
 
     return "\n".join(result)
-

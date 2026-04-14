@@ -16,8 +16,11 @@ class UserNotAdded(BaseFilter):
 
 
 class IsAdmin(BaseFilter):
-    async def __call__(self, event: ChatMemberUpdated | ChatMemberAdministrator) -> bool:
+    async def __call__(
+        self, event: ChatMemberUpdated | ChatMemberAdministrator
+    ) -> bool:
         return isinstance(event, ChatMemberAdministrator)
+
 
 class IsCreator(BaseFilter):
     async def __call__(self, event: Message) -> bool:

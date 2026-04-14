@@ -6,3 +6,5 @@ services:
     container_name: tg-logger-bot
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - ./bot.db:/bot.db

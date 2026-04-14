@@ -8,7 +8,6 @@ from app.utils import shifted_id
 from app.bot_config.settings import settings
 
 
-
 # --------- Getter .env
 BOT_TOKEN: Final[str] = settings.bot.token.get_secret_value()
 CHAT_ID: Final[int] = settings.bot.chat_id
@@ -17,10 +16,7 @@ INFO_CHAT_ADMIN_ID: Final[int] = settings.bot.info_chat_admin_id
 
 
 # --------- Bot config
-bot = Bot(
-    token=BOT_TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 # --------- Chat data | Const

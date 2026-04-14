@@ -1,10 +1,9 @@
-import aiosqlite
 from aiogram import Router
 from aiogram.enums import ChatType
 from aiogram.types import Message
 
 from app.bot_config.config import CHAT_ID, LOG_CHAT_ID, INFO_CHAT_ADMIN_ID
-from app.db import save_custom_command, delete_custom_command
+from app.database.client import ClientDB
 from app.filter import ChatTypeFilter
 from app.filter.chat import ChatId
 from app.filter.delete_command import DeleteCommandFilter
@@ -32,9 +31,9 @@ rt = Router()
     ),
 )
 async def set_custom_command_handler(message: Message, arg1: str, arg2: str) -> None:
-    await save_custom_command(arg1, arg2)
+    await ClientDB.custom_command.save_custom_command(arg1, arg2)
 
-    await message.answer(f"✅ Команда \"{arg1}\" успешно создана!")
+    await message.answer(f'✅ Команда "{arg1}" успешно создана!')
 
 
 @rt.message(
@@ -47,7 +46,7 @@ async def set_custom_command_handler(message: Message, arg1: str, arg2: str) -> 
         ],
     ),
 )
-async def get_custom_command_handler(message: Message, arg1: str, arg2: str) -> None:
+async def get_custom_command_handler(message: Message, arg2: str) -> None:
     await message.answer(arg2)
 
 
@@ -60,10 +59,10 @@ async def get_custom_command_handler(message: Message, arg1: str, arg2: str) -> 
             ChatType.GROUP,
             ChatType.SUPERGROUP,
         ],
-    )
+    ),
 )
 async def delete_custom_command_handler(message: Message, arg1: str) -> None:
-    success: bool = await delete_custom_command(arg1)
+    success: bool = await ClientDB.custom_command.delete_custom_command(arg1)
 
     if success:
         await message.answer(f"Команда {arg1} удалена ✅")

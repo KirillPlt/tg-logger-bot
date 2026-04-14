@@ -17,9 +17,7 @@ class DeleteCommandFilter(BaseFilter):
 
     def __init__(self, command: str) -> None:
         escaped_command: str = re.escape(command)
-        self.regex = re.compile(
-            rf"^{escaped_command}\s+([^\n]+?)\s*$"
-        )
+        self.regex = re.compile(rf"^{escaped_command}\s+([^\n]+?)\s*$")
 
     async def __call__(self, message: Message) -> DeleteCommandData | bool:
         text: str | None = message.text

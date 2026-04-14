@@ -3,7 +3,7 @@ from typing import Final, TypedDict
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
-from app.db import get_custom_command
+from app.database.client import ClientDB
 
 MAX_COMMAND_NAME_LENGTH: Final[int] = 64
 
@@ -29,7 +29,7 @@ class GetCustomCommand(BaseFilter):
         if len(arg1) > MAX_COMMAND_NAME_LENGTH:
             return False
 
-        arg2: str | None = await get_custom_command(arg1)
+        arg2: str | None = await ClientDB.custom_command.get_custom_command(arg1)
         if arg2 is None:
             return False
 

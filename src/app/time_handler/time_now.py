@@ -1,5 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def get_time_now() -> datetime:
-    return datetime.now()
+    return datetime.utcnow() + timedelta(hours=3)

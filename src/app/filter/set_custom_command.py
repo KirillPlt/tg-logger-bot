@@ -18,9 +18,7 @@ class SetCustomCommand(BaseFilter):
 
     def __init__(self, command: str) -> None:
         escaped_command: str = re.escape(command)
-        self.regex = re.compile(
-            rf"^{escaped_command}\s+([^\n]+?)\s*\n([\s\S]+)$"
-        )
+        self.regex = re.compile(rf"^{escaped_command}\s+([^\n]+?)\s*\n([\s\S]+)$")
 
     async def __call__(self, message: Message) -> SetCustomCommandData | bool:
         plain_text: str | None = message.text
