@@ -6,10 +6,10 @@ from aiogram.types import Message
 from app.bot_config.config import CHAT_ID, LOG_CHAT_ID, INFO_CHAT_ADMIN_ID
 from app.db import save_custom_command, delete_custom_command
 from app.filter import ChatTypeFilter
-from app.filter.arg_message import ArgMessage
 from app.filter.chat import ChatId
 from app.filter.delete_command import DeleteCommandFilter
 from app.filter.get_custom_command import GetCustomCommand
+from app.filter.set_custom_command import SetCustomCommand
 from app.filter.user import IsCreator
 
 
