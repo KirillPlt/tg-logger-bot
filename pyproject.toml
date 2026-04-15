@@ -12,26 +12,43 @@ packages = [
 include = ["src", "tests", "README.md"]
 
 [project]
-name = "Logs_telegram_bot"
+name = "tg-logger-bot"
 version = "0.1.0"
-description = "Checking log from chat."
+description = "Telegram bot for moderation logging and custom admin replies."
 requires-python = ">=3.13"
 dependencies = [
-    "aiogram>=3.24.0",
+    "aiogram>=3.25.0,<4.0.0",
     "aiosqlite>=0.22.1",
-    "better-exceptions>=0.3.3",
-    "colorama>=0.4.6",
-    "ecs-logging>=2.3.0",
-    "load-dotenv>=0.1.0",
-    "loguru>=0.7.3",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
-    "rich>=14.3.3",
-    "structlog>=25.5.0",
+    "tzdata>=2025.2",
 ]
+
+[project.scripts]
+tg-logger-bot = "app.main:run"
 
 [dependency-groups]
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
+    "pytest-asyncio>=1.2.0",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+packages = ["app"]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true

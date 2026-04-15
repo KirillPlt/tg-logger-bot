@@ -5,4 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: tg-logger-bot
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+    volumes:
+      - bot-data:/app/data
+
+volumes:
+  bot-data:
