@@ -7,7 +7,9 @@ from aiogram.enums import ChatMemberStatus
 from app.application.dto import ChatUser
 from app.presentation.formatters import (
     build_chat_deep_link,
+    build_message_link,
     describe_restricted_rights_changes,
+    format_message_reference,
     format_user_left_message,
     format_user_restricted_message,
 )
@@ -15,6 +17,17 @@ from app.presentation.formatters import (
 
 def test_build_chat_deep_link_removes_telegram_prefix() -> None:
     assert build_chat_deep_link(-1001234567890) == "tg://chat?id=1234567890"
+
+
+def test_build_message_link_uses_internal_chat_id() -> None:
+    assert build_message_link(-1001234567890, 777) == "https://t.me/c/1234567890/777"
+
+
+def test_format_message_reference_renders_clickable_message_link() -> None:
+    assert (
+        format_message_reference(-1001234567890, 777)
+        == '🔗 Где: <a href="https://t.me/c/1234567890/777">сообщении</a>'
+    )
 
 
 def test_format_user_left_message_contains_user_and_hashtag() -> None:
@@ -49,4 +62,3 @@ def test_format_user_restricted_message_uses_change_set() -> None:
     )
     assert "Сняли права администратора" in rendered_message
     assert "#id9" in rendered_message
-

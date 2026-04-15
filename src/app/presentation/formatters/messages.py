@@ -13,23 +13,35 @@ def build_chat_deep_link(chat_id: int) -> str:
     return f"tg://chat?id={internal_chat_id}"
 
 
+def build_message_link(chat_id: int, message_id: int) -> str:
+    chat_id_as_text = str(chat_id)
+    internal_chat_id = chat_id_as_text.removeprefix("-100").lstrip("-")
+    return f"https://t.me/c/{internal_chat_id}/{message_id}"
+
+
+def format_message_reference(chat_id: int, message_id: int, label: str = "сообщении") -> str:
+    return f"🔗 Где: <a href=\"{build_message_link(chat_id, message_id)}\">{label}</a>"
+
+
 def format_user_left_message(user: ChatUser, moment: datetime) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"🚪 Пользователь {_format_user(user)} покинул группу.\n\n"
-        f"<b>#ПОКИНУЛ_ГРУППУ</b>\n"
-        f"#id{user.id}"
+        f"🚪 <b>Пользователь покинул группу.</b>\n"
+        f"👤 Кто: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"<b>#ПОКИНУЛ_ГРУППУ</b>"
     )
 
 
 def format_user_kicked_message(user: ChatUser, admin: ChatUser, moment: datetime) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"🚪 Пользователя {_format_user(user)} "
-        f"<b>исключил из чата администратор</b> {_format_user(admin)}\n\n"
-        f"<b>#АДМИН_ИСКЛЮЧИЛ_ИЗ_ГРУППЫ</b>\n"
-        f"Админ: #id{admin.id}\n"
-        f"Исключил: #id{user.id}"
+        f"🚪 <b>Администратор исключил пользователя из группы.</b>\n"
+        f"🛡 Администратор: {_format_user(admin)}\n"
+        f"👤 Пользователь: {_format_user(user)}\n"
+        f"🆔 Админ: #id{admin.id}\n"
+        f"🆔 Пользователь: #id{user.id}\n\n"
+        f"<b>#АДМИН_ИСКЛЮЧИЛ_ИЗ_ГРУППЫ</b>"
     )
 
 
@@ -37,6 +49,7 @@ def format_user_added_message(
     adder: ChatUser,
     added_users: Sequence[ChatUser],
     moment: datetime,
+    message_reference: str | None = None,
 ) -> str:
     rendered_users = "\n".join(
         f"{index}. {_format_user(user)}"
@@ -44,21 +57,26 @@ def format_user_added_message(
     )
     rendered_user_ids = "\n".join(f"#id{user.id}" for user in added_users)
 
+    message_reference_block = f"{message_reference}\n\n" if message_reference else ""
+
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"🎉 Пользователь {_format_user(adder)} добавил в группу:\n"
-        f"{rendered_users}\n\n"
-        f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>\n"
-        f"{rendered_user_ids}"
+        f"👥 <b>В группу добавили новых пользователей.</b>\n"
+        f"🙋 Добавил: {_format_user(adder)}\n\n"
+        f"{message_reference_block}"
+        f"📋 Список:\n{rendered_users}\n\n"
+        f"🆔 ID пользователей:\n{rendered_user_ids}\n\n"
+        f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>"
     )
 
 
 def format_user_joined_message(user: ChatUser, moment: datetime) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"🎉 Пользователь {_format_user(user)} присоединился в группу.\n\n"
-        f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>\n"
-        f"#id{user.id}"
+        f"🎉 <b>Пользователь присоединился к группе.</b>\n"
+        f"👤 Кто: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"<b>#НОВЫЙ_ПОЛЬЗОВАТЕЛЬ</b>"
     )
 
 
@@ -69,10 +87,11 @@ def format_edited_message_notice(
 ) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"✏️ Пользователь {_format_user(user)} изменил сообщение.\n"
-        f"Тип содержимого: {content_description}\n\n"
-        f"<b>#ИЗМЕНИЛ_СООБЩЕНИЕ</b>\n"
-        f"#id{user.id}"
+        f"✏️ <b>Пользователь изменил сообщение.</b>\n"
+        f"👤 Кто: {_format_user(user)}\n"
+        f"🧩 Тип содержимого: {content_description}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"<b>#ИЗМЕНИЛ_СООБЩЕНИЕ</b>"
     )
 
 
@@ -104,11 +123,11 @@ def format_user_restricted_message(
 
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"Пользователю {_format_user(user)}\n"
-        f"<b>{title}:</b>\n\n"
-        f"{details}\n\n"
-        f"<b>#ИЗМЕНИЛИ_ПРАВА</b>\n"
-        f"#id{user.id}"
+        f"🔐 <b>{title}.</b>\n"
+        f"👤 Пользователь: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"📋 Что изменилось:\n{details}\n\n"
+        f"<b>#ИЗМЕНИЛИ_ПРАВА</b>"
     )
 
 
@@ -119,11 +138,11 @@ def format_admin_promotion_message(
 ) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
-        f"Пользователю {_format_user(user)}\n"
-        f"выдали <b>права администратора</b>:\n\n"
-        f"{rights_text}\n\n"
-        f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА</b>\n"
-        f"#id{user.id}"
+        f"🛡 <b>Пользователю выдали права администратора.</b>\n"
+        f"👤 Пользователь: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"📋 Выданные права:\n{rights_text}\n\n"
+        f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА</b>"
     )
 
 

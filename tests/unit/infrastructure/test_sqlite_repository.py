@@ -1,7 +1,11 @@
 import aiosqlite
 
-from app.domain.models import CustomCommand
-from app.infrastructure.persistence import SQLiteCustomCommandRepository, SQLiteDatabase
+from app.domain.models import BotRuntimeSettings, CustomCommand
+from app.infrastructure.persistence import (
+    SQLiteBotRuntimeSettingsRepository,
+    SQLiteCustomCommandRepository,
+    SQLiteDatabase,
+)
 
 
 async def test_sqlite_repository_persists_commands(tmp_path) -> None:
@@ -52,3 +56,16 @@ async def test_sqlite_database_migrates_legacy_custom_commands_schema(tmp_path) 
     assert migrated_command.display_name == "Привет"
     assert migrated_command.response_html == "<b>Мир</b>"
 
+
+async def test_sqlite_repository_persists_runtime_settings(tmp_path) -> None:
+    database = SQLiteDatabase(tmp_path / "bot.db")
+    await database.initialize()
+    repository = SQLiteBotRuntimeSettingsRepository(database)
+
+    default_settings = await repository.get()
+    assert default_settings.reaction_logs_enabled is True
+
+    await repository.save(BotRuntimeSettings(reaction_logs_enabled=False))
+
+    updated_settings = await repository.get()
+    assert updated_settings.reaction_logs_enabled is False

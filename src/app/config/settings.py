@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,10 +25,24 @@ class RuntimeSettings(BaseModel):
     admin_cache_ttl_seconds: int = Field(default=60, ge=5, le=3600)
 
 
+class LoggingSettings(BaseModel):
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    json_logs: bool = Field(default=True, alias="json")
+    step_debug_enabled: bool = False
+
+
+class MetricsSettings(BaseModel):
+    enabled: bool = True
+    host: str = "0.0.0.0"
+    port: int = Field(default=9000, ge=1, le=65535)
+
+
 class Settings(BaseSettings):
     bot: BotSettings
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     runtime: RuntimeSettings = Field(default_factory=RuntimeSettings)
+    logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    metrics: MetricsSettings = Field(default_factory=MetricsSettings)
 
     model_config = SettingsConfigDict(
         env_file=".env",
