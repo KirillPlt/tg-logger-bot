@@ -6,6 +6,7 @@ from aiogram.enums import ChatMemberStatus
 
 from app.application.dto import ChatUser
 from app.presentation.formatters import (
+    RESTRICTED_RIGHTS_TITLES,
     build_chat_deep_link,
     build_message_link,
     describe_restricted_rights_changes,
@@ -13,6 +14,13 @@ from app.presentation.formatters import (
     format_user_left_message,
     format_user_restricted_message,
 )
+
+
+def _build_restricted_member(**overrides: bool | ChatMemberStatus) -> SimpleNamespace:
+    attributes = {attribute_name: True for attribute_name in RESTRICTED_RIGHTS_TITLES}
+    attributes["status"] = ChatMemberStatus.RESTRICTED
+    attributes.update(overrides)
+    return SimpleNamespace(**attributes)
 
 
 def test_build_chat_deep_link_removes_telegram_prefix() -> None:
@@ -62,3 +70,27 @@ def test_format_user_restricted_message_uses_change_set() -> None:
     )
     assert "Сняли права администратора" in rendered_message
     assert "#id9" in rendered_message
+
+
+def test_describe_restricted_rights_changes_shows_revoked_permission_for_member_to_restricted() -> None:
+    old_member = SimpleNamespace(status=ChatMemberStatus.MEMBER)
+    new_member = _build_restricted_member(
+        can_send_messages=False,
+    )
+
+    change_set = describe_restricted_rights_changes(old_member, new_member)
+
+    assert change_set is not None
+    assert change_set.lines == ("Отправлять сообщения: ✅ → ❌",)
+
+
+def test_describe_restricted_rights_changes_shows_restored_permission_for_restricted_to_member() -> None:
+    old_member = _build_restricted_member(
+        can_send_messages=False,
+    )
+    new_member = SimpleNamespace(status=ChatMemberStatus.MEMBER)
+
+    change_set = describe_restricted_rights_changes(old_member, new_member)
+
+    assert change_set is not None
+    assert change_set.lines == ("Отправлять сообщения: ❌ → ✅",)

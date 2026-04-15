@@ -31,6 +31,15 @@ RESTRICTED_RIGHTS_TITLES = {
     "can_invite_users": "Приглашение пользователей",
 }
 
+UNRESTRICTED_MEMBER_STATUSES = frozenset(
+    {
+        ChatMemberStatus.CREATOR,
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.MEMBER,
+    }
+)
+NO_ACCESS_MEMBER_STATUSES = frozenset({ChatMemberStatus.LEFT, ChatMemberStatus.KICKED})
+
 
 @dataclass(frozen=True, slots=True)
 class RestrictedRightsChangeSet:
@@ -59,8 +68,8 @@ def describe_restricted_rights_changes(
     lines: list[str] = []
 
     for attribute_name, title in RESTRICTED_RIGHTS_TITLES.items():
-        old_value = getattr(old_member, attribute_name, None)
-        new_value = getattr(new_member, attribute_name, None)
+        old_value = _resolve_restricted_right_value(old_member, attribute_name)
+        new_value = _resolve_restricted_right_value(new_member, attribute_name)
 
         if old_value is None and new_value is None:
             continue
@@ -69,15 +78,16 @@ def describe_restricted_rights_changes(
             continue
 
         if old_value is None:
-            lines.append(f"{title}: {'✅' if bool(new_value) else '❌'}")
+            lines.append(f"{title}: {_format_restricted_right_state(new_value)}")
             continue
 
         if new_value is None:
-            lines.append(f"{title}: {'✅' if bool(old_value) else '❌'}")
+            lines.append(f"{title}: {_format_restricted_right_state(old_value)}")
             continue
 
         lines.append(
-            f"{title}: {'✅' if bool(old_value) else '❌'} → {'✅' if bool(new_value) else '❌'}"
+            f"{title}: {_format_restricted_right_state(old_value)} → "
+            f"{_format_restricted_right_state(new_value)}"
         )
 
     if not lines and not includes_admin_demotion:
@@ -87,3 +97,25 @@ def describe_restricted_rights_changes(
         lines=tuple(lines),
         includes_admin_demotion=includes_admin_demotion,
     )
+
+
+def _resolve_restricted_right_value(member: Any, attribute_name: str) -> bool | None:
+    value = getattr(member, attribute_name, None)
+    if value is not None:
+        return bool(value)
+
+    status = getattr(member, "status", None)
+    if status == ChatMemberStatus.RESTRICTED:
+        return None
+
+    if status in UNRESTRICTED_MEMBER_STATUSES:
+        return True
+
+    if status in NO_ACCESS_MEMBER_STATUSES:
+        return False
+
+    return None
+
+
+def _format_restricted_right_state(value: bool | None) -> str:
+    return "✅" if value else "❌"

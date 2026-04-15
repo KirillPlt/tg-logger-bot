@@ -78,3 +78,53 @@ docker compose up --build -d
 ```
 
 Контейнер хранит SQLite в named volume `bot-data`, поэтому данные не теряются между пересозданиями контейнера.
+
+## Grafana И Loki
+
+Для observability-стека добавлен отдельный Docker profile `observability`. В него входят:
+
+- `Prometheus` — забирает метрики у бота, Loki и Alloy;
+- `Loki` — хранит логи;
+- `Alloy` — собирает Docker stdout/stderr из контейнеров и отправляет в Loki;
+- `Grafana` — уже с provisioned datasource и дашбордом `tg-logger-bot Observability`.
+
+Запуск:
+
+```bash
+docker compose --profile observability up --build -d
+```
+
+Если нужно поднять только observability-стек без перезапуска бота:
+
+```bash
+docker compose --profile observability up -d loki alloy prometheus grafana
+```
+
+Полезные адреса:
+
+- Grafana: `http://localhost:3000`
+- Prometheus: `http://localhost:9090`
+- Loki API: `http://localhost:3100`
+- Alloy UI/metrics: `http://localhost:12345`
+
+Логин в Grafana берётся из `.env`:
+
+- `GRAFANA_ADMIN_USER`
+- `GRAFANA_ADMIN_PASSWORD`
+
+Что уже настроено:
+
+- datasource `Prometheus`;
+- datasource `Loki`;
+- дашборд `tg-logger-bot Observability`;
+- сбор Docker-логов через `Alloy`, а не `Promtail`.
+
+Для логов в Grafana открой `Explore`, выбери datasource `Loki` и используй, например, такие запросы:
+
+```logql
+{compose_service="bot"}
+```
+
+```logql
+{compose_project="tg-logger-bot", compose_service="bot"} |= "message_reaction_logged"
+```
