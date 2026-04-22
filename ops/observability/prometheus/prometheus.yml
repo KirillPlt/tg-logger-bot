@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - prometheus:9090
+
+  - job_name: tg-logger-bot
+    static_configs:
+      - targets:
+          - bot:9000
+
+  - job_name: loki
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - loki:3100
+
+  - job_name: alloy
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - alloy:12345

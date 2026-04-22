@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from app.domain.models import CustomCommand
+
+
+class CustomCommandRepository(Protocol):
+    async def list_commands(self) -> list[CustomCommand]: ...
+
+    async def get_by_name(self, normalized_name: str) -> CustomCommand | None: ...
+
+    async def upsert(self, command: CustomCommand) -> None: ...
+
+    async def delete(self, normalized_name: str) -> bool: ...

@@ -5,4 +5,134 @@ services:
       dockerfile: Dockerfile
     container_name: tg-logger-bot
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+    environment:
+      TRACING__OTLP_ENDPOINT: http://alloy:4317
+    volumes:
+      - bot-data:/app/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tg-logger-prometheus
+    profiles:
+      - observability
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./ops/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: tg-logger-loki
+    profiles:
+      - observability
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/config.yml
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./ops/observability/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+
+  tempo:
+    image: grafana/tempo:2.9.0
+    container_name: tg-logger-tempo
+    profiles:
+      - observability
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/tempo/config.yml
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+    volumes:
+      - ./ops/observability/tempo/config.yml:/etc/tempo/config.yml:ro
+      - tempo-data:/var/tempo
+
+  tempo-query:
+    image: grafana/tempo-query:main-44e2650@sha256:09a51ceba5d8b652ff1c8e38b04fb05c117286006c2b177b89ce79b3103b0851
+    container_name: tg-logger-tempo-query
+    profiles:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - tempo
+    command:
+      - -config
+      - /etc/tempo-query/config.yml
+    volumes:
+      - ./ops/observability/tempo-query/config.yml:/etc/tempo-query/config.yml:ro
+
+  jaeger-query:
+    image: jaegertracing/jaeger-query:1.76.0
+    container_name: tg-logger-jaeger-query
+    profiles:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - tempo-query
+    environment:
+      SPAN_STORAGE_TYPE: grpc
+      GRPC_STORAGE_SERVER: tempo-query:7777
+    ports:
+      - "${JAEGER_PORT:-16686}:16686"
+
+  alloy:
+    image: grafana/alloy:v1.15.0
+    container_name: tg-logger-alloy
+    profiles:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - loki
+      - tempo
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "${ALLOY_PORT:-12345}:12345"
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    volumes:
+      - ./ops/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tg-logger-grafana
+    profiles:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./ops/observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./ops/observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./ops/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  bot-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  alloy-data:
+  grafana-data:

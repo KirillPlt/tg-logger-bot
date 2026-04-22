@@ -1,16 +1,25 @@
 FROM python:3.13-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
+
 COPY --from=docker.io/astral/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-# Копируем файлы зависимостей
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-install-project --no-dev
 
-# Устанавливаем зависимости
-RUN uv sync --frozen
+COPY src ./src
+RUN uv sync --frozen --no-dev
 
-# Копируем остальной код
-COPY . .
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
 
-# Запуск приложения
-CMD ["uv", "run", "python", "src/app/core/setup.py"]
+USER appuser
+
+CMD ["tg-logger-bot"]
