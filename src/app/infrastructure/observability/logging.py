@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timezone
 
 from app.infrastructure.observability.context import get_log_context
+from app.infrastructure.observability.tracing import get_trace_log_context
 
 
 _LOGGING_CONFIGURED = False
@@ -12,7 +13,9 @@ _LOGGING_CONFIGURED = False
 
 class ContextEnricherFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        for key, value in get_log_context().items():
+        context = get_log_context()
+        context.update(get_trace_log_context())
+        for key, value in context.items():
             if not hasattr(record, key):
                 setattr(record, key, value)
         return True
@@ -46,7 +49,9 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, object] = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(
+                record.created, tz=timezone.utc
+            ).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -74,9 +79,11 @@ def setup_logging(level_name: str, json_logs: bool) -> None:
 
     handler = logging.StreamHandler()
     handler.addFilter(ContextEnricherFilter())
-    handler.setFormatter(JsonFormatter() if json_logs else logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s %(message)s"
-    ))
+    handler.setFormatter(
+        JsonFormatter()
+        if json_logs
+        else logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    )
 
     root_logger.addHandler(handler)
     logging.getLogger("aiogram").setLevel(logging.INFO)
@@ -95,4 +102,3 @@ def log_step(
     **fields: object,
 ) -> None:
     logger.log(level, step, extra={"step": step, **fields})
-

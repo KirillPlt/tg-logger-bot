@@ -1,14 +1,16 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 import logging
 from pathlib import Path
 import shutil
 from time import perf_counter
+from typing import Iterator
 
 import aiosqlite
 
 from app.domain.models import normalize_command_name, sanitize_command_name
 from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability.tracing import trace_db_operation
 
 
 CREATE_CUSTOM_COMMANDS_TABLE = """
@@ -41,7 +43,16 @@ CREATE TABLE IF NOT EXISTS chat_states (
 CREATE_BOT_RUNTIME_SETTINGS_TABLE = """
 CREATE TABLE IF NOT EXISTS bot_runtime_settings (
     singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
-    reaction_logs_enabled INTEGER NOT NULL DEFAULT 1 CHECK (reaction_logs_enabled IN (0, 1))
+    reaction_logs_enabled INTEGER NOT NULL DEFAULT 1 CHECK (reaction_logs_enabled IN (0, 1)),
+    greeting_html TEXT NULL
+)
+"""
+
+CREATE_SAVED_NOTES_TABLE = """
+CREATE TABLE IF NOT EXISTS saved_notes (
+    normalized_name TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    response_html TEXT NOT NULL
 )
 """
 
@@ -62,37 +73,47 @@ class SQLiteDatabase:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._migrate_legacy_path()
 
-        try:
-            async with self.connect() as connection:
-                await self._migrate_custom_commands_table(connection)
-                await connection.execute(CREATE_MESSAGE_SNAPSHOTS_TABLE)
-                await connection.execute(CREATE_CHAT_STATES_TABLE)
-                await connection.execute(CREATE_BOT_RUNTIME_SETTINGS_TABLE)
-                await connection.execute(
-                    """
-                    INSERT OR IGNORE INTO bot_runtime_settings (
-                        singleton_id,
-                        reaction_logs_enabled
+        with self.trace_operation("initialize_database"):
+            try:
+                async with self.connect() as connection:
+                    await self._migrate_custom_commands_table(connection)
+                    await self._migrate_bot_runtime_settings_table(connection)
+                    await connection.execute(CREATE_MESSAGE_SNAPSHOTS_TABLE)
+                    await connection.execute(CREATE_CHAT_STATES_TABLE)
+                    await connection.execute(CREATE_SAVED_NOTES_TABLE)
+                    await connection.execute(
+                        """
+                        INSERT OR IGNORE INTO bot_runtime_settings (
+                            singleton_id,
+                            reaction_logs_enabled,
+                            greeting_html
+                        )
+                        VALUES (1, 1, NULL)
+                        """
                     )
-                    VALUES (1, 1)
-                    """
+                    await connection.commit()
+            except Exception:
+                self._observe_operation(
+                    "initialize_database", "error", operation_started_at
                 )
-                await connection.commit()
-        except Exception:
-            self._observe_operation("initialize_database", "error", operation_started_at)
-            self._logger.exception(
-                "database_initialize_failed",
-                extra={"operation": "initialize_database", "db_path": str(self._path)},
-            )
-            raise
+                self._logger.exception(
+                    "database_initialize_failed",
+                    extra={
+                        "operation": "initialize_database",
+                        "db_path": str(self._path),
+                    },
+                )
+                raise
 
-        self._observe_operation("initialize_database", "success", operation_started_at)
-        log_step(
-            self._logger,
-            "database_initialized",
-            operation="initialize_database",
-            db_path=str(self._path),
-        )
+            self._observe_operation(
+                "initialize_database", "success", operation_started_at
+            )
+            log_step(
+                self._logger,
+                "database_initialized",
+                operation="initialize_database",
+                db_path=str(self._path),
+            )
 
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[aiosqlite.Connection]:
@@ -124,8 +145,12 @@ class SQLiteDatabase:
             destination=str(self._path),
         )
 
-    async def _migrate_custom_commands_table(self, connection: aiosqlite.Connection) -> None:
-        table_info_cursor = await connection.execute("PRAGMA table_info(custom_commands)")
+    async def _migrate_custom_commands_table(
+        self, connection: aiosqlite.Connection
+    ) -> None:
+        table_info_cursor = await connection.execute(
+            "PRAGMA table_info(custom_commands)"
+        )
         table_info = await table_info_cursor.fetchall()
         await table_info_cursor.close()
 
@@ -139,7 +164,9 @@ class SQLiteDatabase:
         if column_names == expected_columns:
             return
 
-        await connection.execute("ALTER TABLE custom_commands RENAME TO custom_commands_legacy")
+        await connection.execute(
+            "ALTER TABLE custom_commands RENAME TO custom_commands_legacy"
+        )
         await connection.execute(CREATE_CUSTOM_COMMANDS_TABLE)
 
         legacy_rows_cursor = await connection.execute(
@@ -179,6 +206,29 @@ class SQLiteDatabase:
             migrated_rows=len(legacy_rows),
         )
 
+    async def _migrate_bot_runtime_settings_table(
+        self, connection: aiosqlite.Connection
+    ) -> None:
+        await connection.execute(CREATE_BOT_RUNTIME_SETTINGS_TABLE)
+        table_info_cursor = await connection.execute(
+            "PRAGMA table_info(bot_runtime_settings)"
+        )
+        table_info = await table_info_cursor.fetchall()
+        await table_info_cursor.close()
+
+        column_names = {str(row["name"]) for row in table_info}
+        if "greeting_html" in column_names:
+            return
+
+        await connection.execute(
+            "ALTER TABLE bot_runtime_settings ADD COLUMN greeting_html TEXT NULL"
+        )
+        log_step(
+            self._logger,
+            "bot_runtime_settings_greeting_column_added",
+            operation="migrate_bot_runtime_settings",
+        )
+
     def observe_db_operation(
         self,
         operation: str,
@@ -186,6 +236,11 @@ class SQLiteDatabase:
         started_at: float,
     ) -> None:
         self._observe_operation(operation, status, started_at)
+
+    @contextmanager
+    def trace_operation(self, operation: str) -> Iterator[None]:
+        with trace_db_operation(operation, self._path):
+            yield
 
     @property
     def logger(self) -> logging.Logger:

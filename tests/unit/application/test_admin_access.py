@@ -48,4 +48,3 @@ async def test_admin_access_service_uses_ttl_cache() -> None:
     clock.advance(timedelta(seconds=31))
     assert await service.is_chat_admin(bot, 3) is True
     assert bot.calls == 2
-

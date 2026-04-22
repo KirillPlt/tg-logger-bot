@@ -31,12 +31,14 @@ async def test_describe_service_message_renders_chat_title_diff() -> None:
         new_chat_title="Новое имя",
     )
 
-    rendered = await describe_service_message(message=message, chat_state_service=service)
+    rendered = await describe_service_message(
+        message=message, chat_state_service=service
+    )
 
     assert rendered is not None
     assert "Старое имя" in rendered
     assert "Новое имя" in rendered
-    assert 'https://t.me/c/1/10' in rendered
+    assert "https://t.me/c/1/10" in rendered
 
 
 async def test_describe_service_message_renders_auto_delete_diff() -> None:
@@ -49,12 +51,16 @@ async def test_describe_service_message_renders_auto_delete_diff() -> None:
         date=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
         chat=chat,
         from_user=actor,
-        message_auto_delete_timer_changed=MessageAutoDeleteTimerChanged(message_auto_delete_time=300),
+        message_auto_delete_timer_changed=MessageAutoDeleteTimerChanged(
+            message_auto_delete_time=300
+        ),
     )
 
-    rendered = await describe_service_message(message=message, chat_state_service=service)
+    rendered = await describe_service_message(
+        message=message, chat_state_service=service
+    )
 
     assert rendered is not None
     assert "60 сек." in rendered
     assert "300 сек." in rendered
-    assert 'https://t.me/c/1/11' in rendered
+    assert "https://t.me/c/1/11" in rendered

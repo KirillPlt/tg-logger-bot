@@ -7,4 +7,3 @@ class MessageSnapshot:
     message_id: int
     content_type: str
     rendered_html: str | None
-

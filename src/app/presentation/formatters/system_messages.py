@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
 
-from aiogram.types import InaccessibleMessage, Message
+from aiogram.types import Message
 
 from app.application.services import ChatStateService
 from app.presentation.formatters.messages import format_message_reference
@@ -16,7 +15,9 @@ async def describe_service_message(
     if message.from_user is None:
         actor = "🤖 Система"
     else:
-        username_tag = f" [@{message.from_user.username}]" if message.from_user.username else ""
+        username_tag = (
+            f" [@{message.from_user.username}]" if message.from_user.username else ""
+        )
         actor = f"{message.from_user.mention_html()}{username_tag}"
 
     timestamp = message.date.strftime("%d.%m.%Y | %H:%M")
@@ -24,7 +25,9 @@ async def describe_service_message(
     service_message_reference = format_message_reference(chat_id, message.message_id)
 
     if message.new_chat_title is not None:
-        previous_title, _ = await chat_state_service.update_title(chat_id, message.new_chat_title)
+        previous_title, _ = await chat_state_service.update_title(
+            chat_id, message.new_chat_title
+        )
         return _render(
             timestamp,
             f"📝 {actor} изменил название чата.\n"
@@ -39,7 +42,9 @@ async def describe_service_message(
             chat_id,
             message.new_chat_photo[-1].file_unique_id,
         )
-        previous_state = "была" if previous_photo_id is not None else "не была установлена"
+        previous_state = (
+            "была" if previous_photo_id is not None else "не была установлена"
+        )
         return _render(
             timestamp,
             f"🖼 {actor} обновил фотографию чата.\n"
@@ -61,7 +66,9 @@ async def describe_service_message(
 
     if message.message_auto_delete_timer_changed is not None:
         new_seconds = message.message_auto_delete_timer_changed.message_auto_delete_time
-        previous_seconds, _ = await chat_state_service.update_auto_delete_timer(chat_id, new_seconds)
+        previous_seconds, _ = await chat_state_service.update_auto_delete_timer(
+            chat_id, new_seconds
+        )
         return _render(
             timestamp,
             f"⏳ {actor} изменил таймер автоудаления сообщений.\n"
@@ -73,7 +80,9 @@ async def describe_service_message(
 
     if message.pinned_message is not None:
         pinned_message = message.pinned_message
-        pinned_message_reference = format_message_reference(chat_id, pinned_message.message_id)
+        pinned_message_reference = format_message_reference(
+            chat_id, pinned_message.message_id
+        )
         pinned_preview = (
             pinned_message.html_text
             if isinstance(pinned_message, Message)
@@ -88,7 +97,9 @@ async def describe_service_message(
         )
 
     if message.video_chat_scheduled is not None:
-        start_date = message.video_chat_scheduled.start_date.strftime("%d.%m.%Y | %H:%M")
+        start_date = message.video_chat_scheduled.start_date.strftime(
+            "%d.%m.%Y | %H:%M"
+        )
         return _render(
             timestamp,
             f"🎥 {actor} запланировал видеочат на <b>{start_date}</b>.",
@@ -108,14 +119,16 @@ async def describe_service_message(
         duration = message.video_chat_ended.duration
         return _render(
             timestamp,
-            f"🎥 {actor} завершил видеочат.\n"
-            f"⏱ Длительность: <b>{duration} сек.</b>",
+            f"🎥 {actor} завершил видеочат.\n⏱ Длительность: <b>{duration} сек.</b>",
             "ЗАВЕРШИЛИ_ВИДЕОЧАТ",
             message_reference=service_message_reference,
         )
 
     if message.video_chat_participants_invited is not None:
-        invited_users = ", ".join(user.mention_html() for user in message.video_chat_participants_invited.users)
+        invited_users = ", ".join(
+            user.mention_html()
+            for user in message.video_chat_participants_invited.users
+        )
         return _render(
             timestamp,
             f"🎥 {actor} пригласил участников в видеочат:\n{invited_users}",
@@ -135,8 +148,7 @@ async def describe_service_message(
         edited_name = message.forum_topic_edited.name or "Без изменения названия"
         return _render(
             timestamp,
-            f"🧵 {actor} изменил тему форума.\n"
-            f"📝 Новое название: <b>{edited_name}</b>",
+            f"🧵 {actor} изменил тему форума.\n📝 Новое название: <b>{edited_name}</b>",
             "ИЗМЕНИЛИ_ТЕМУ",
             message_reference=service_message_reference,
         )
@@ -173,7 +185,11 @@ async def describe_service_message(
             message_reference=service_message_reference,
         )
 
-    if message.group_chat_created or message.supergroup_chat_created or message.channel_chat_created:
+    if (
+        message.group_chat_created
+        or message.supergroup_chat_created
+        or message.channel_chat_created
+    ):
         return _render(
             timestamp,
             "ℹ️ Telegram создал системное сообщение о создании чата.",
@@ -223,10 +239,7 @@ def _render(
     message_reference_block = f"{message_reference}\n\n" if message_reference else ""
 
     return (
-        f"🕒 <b>{timestamp}</b>\n\n"
-        f"{body}\n\n"
-        f"{message_reference_block}"
-        f"<b>#{hashtag}</b>"
+        f"🕒 <b>{timestamp}</b>\n\n{body}\n\n{message_reference_block}<b>#{hashtag}</b>"
     )
 
 

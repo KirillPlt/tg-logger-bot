@@ -5,7 +5,12 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from app.config import Settings
-from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability import (
+    MetricsCollector,
+    get_logger,
+    log_step,
+    trace_handler,
+)
 from app.presentation.filters import ChatIdFilter, OwnerFilter
 from app.presentation.keyboards import build_start_message_keyboard
 
@@ -27,13 +32,18 @@ def create_start_router(settings: Settings) -> Router:
     logger = get_logger(__name__)
 
     @router.message(Command("start"), OwnerFilter(settings.bot.owner_id))
-    async def start_handler(message: Message, bot: Bot, metrics: MetricsCollector) -> None:
+    @trace_handler
+    async def start_handler(
+        message: Message, bot: Bot, metrics: MetricsCollector
+    ) -> None:
         started_at = perf_counter()
         log_step(
             logger,
             "start_command_received",
             handler="start.start_handler",
-            actor_user_id=message.from_user.id if message.from_user is not None else None,
+            actor_user_id=message.from_user.id
+            if message.from_user is not None
+            else None,
         )
         sent_message = await message.answer(
             text=START_MESSAGE_TEXT,

@@ -49,4 +49,3 @@ async def test_delete_command_removes_cached_entry() -> None:
 
     assert was_deleted is True
     assert await service.resolve("Команда") is None
-

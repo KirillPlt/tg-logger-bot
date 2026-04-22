@@ -7,4 +7,3 @@ class ChatState:
     title: str | None = None
     photo_file_unique_id: str | None = None
     auto_delete_time_seconds: int | None = None
-

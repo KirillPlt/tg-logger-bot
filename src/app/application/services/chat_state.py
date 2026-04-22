@@ -12,7 +12,9 @@ class ChatStateService:
         state = await self._repository.get(chat_id)
         return state if state is not None else ChatState(chat_id=chat_id)
 
-    async def update_title(self, chat_id: int, title: str) -> tuple[str | None, ChatState]:
+    async def update_title(
+        self, chat_id: int, title: str
+    ) -> tuple[str | None, ChatState]:
         state = await self.get_or_create(chat_id)
         updated_state = replace(state, title=title)
         await self._repository.upsert(updated_state)
@@ -40,4 +42,3 @@ class ChatStateService:
         )
         await self._repository.upsert(updated_state)
         return state.auto_delete_time_seconds, updated_state
-

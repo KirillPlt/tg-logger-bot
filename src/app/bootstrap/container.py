@@ -8,6 +8,7 @@ from app.application.services import (
     ChatStateService,
     CustomCommandService,
     MessageSnapshotService,
+    NoteService,
 )
 from app.config import Settings
 from app.infrastructure.observability import MetricsCollector
@@ -17,6 +18,7 @@ from app.infrastructure.persistence import (
     SQLiteCustomCommandRepository,
     SQLiteDatabase,
     SQLiteMessageSnapshotRepository,
+    SQLiteNoteRepository,
 )
 from app.infrastructure.time import SystemClock
 
@@ -28,6 +30,7 @@ class ApplicationContainer:
     clock: Clock
     metrics: MetricsCollector
     custom_command_service: CustomCommandService
+    note_service: NoteService
     admin_access_service: AdminAccessService
     bot_runtime_settings_service: BotRuntimeSettingsService
     message_snapshot_service: MessageSnapshotService
@@ -39,10 +42,14 @@ def build_container(settings: Settings) -> ApplicationContainer:
     database = SQLiteDatabase(settings.database.path, metrics=metrics)
     clock = SystemClock(settings.runtime.timezone)
     custom_command_repository = SQLiteCustomCommandRepository(database)
+    note_repository = SQLiteNoteRepository(database)
     bot_runtime_settings_repository = SQLiteBotRuntimeSettingsRepository(database)
     message_snapshot_repository = SQLiteMessageSnapshotRepository(database)
     chat_state_repository = SQLiteChatStateRepository(database)
-    custom_command_service = CustomCommandService(custom_command_repository, metrics=metrics)
+    custom_command_service = CustomCommandService(
+        custom_command_repository, metrics=metrics
+    )
+    note_service = NoteService(note_repository, metrics=metrics)
     bot_runtime_settings_service = BotRuntimeSettingsService(
         bot_runtime_settings_repository,
         metrics=metrics,
@@ -62,6 +69,7 @@ def build_container(settings: Settings) -> ApplicationContainer:
         clock=clock,
         metrics=metrics,
         custom_command_service=custom_command_service,
+        note_service=note_service,
         admin_access_service=admin_access_service,
         bot_runtime_settings_service=bot_runtime_settings_service,
         message_snapshot_service=message_snapshot_service,

@@ -37,12 +37,29 @@ class MetricsSettings(BaseModel):
     port: int = Field(default=9000, ge=1, le=65535)
 
 
+class TracingSettings(BaseModel):
+    enabled: bool = False
+    service_name: str = "tg-logger-bot"
+    otlp_endpoint: str = "http://localhost:4317"
+    sampling_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+    insecure: bool = True
+
+
+class TelegramHttpSettings(BaseModel):
+    resolver: Literal["aiodns", "threaded"] = "aiodns"
+    dns_cache_ttl_seconds: int = Field(default=3600, ge=0)
+    session_timeout_seconds: float = Field(default=60.0, gt=0.0)
+    connection_limit: int = Field(default=100, ge=1, le=1000)
+
+
 class Settings(BaseSettings):
     bot: BotSettings
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     runtime: RuntimeSettings = Field(default_factory=RuntimeSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     metrics: MetricsSettings = Field(default_factory=MetricsSettings)
+    tracing: TracingSettings = Field(default_factory=TracingSettings)
+    telegram_http: TelegramHttpSettings = Field(default_factory=TelegramHttpSettings)
 
     model_config = SettingsConfigDict(
         env_file=".env",

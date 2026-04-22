@@ -5,7 +5,12 @@ from aiogram.types import ChatJoinRequest
 
 from app.application.services import AdminAccessService
 from app.config import Settings
-from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability import (
+    MetricsCollector,
+    get_logger,
+    log_step,
+    trace_handler,
+)
 from app.presentation.filters import ChatIdFilter
 
 
@@ -14,6 +19,7 @@ def create_join_request_router(settings: Settings) -> Router:
     logger = get_logger(__name__)
 
     @router.chat_join_request(ChatIdFilter(settings.bot.info_chat_admin_id))
+    @trace_handler
     async def admin_info_join_request(
         request: ChatJoinRequest,
         bot: Bot,
@@ -59,6 +65,7 @@ def create_join_request_router(settings: Settings) -> Router:
         )
 
     @router.chat_join_request(ChatIdFilter(settings.bot.log_chat_id))
+    @trace_handler
     async def log_chat_join_request(
         request: ChatJoinRequest,
         bot: Bot,

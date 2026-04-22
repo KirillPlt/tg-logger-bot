@@ -19,8 +19,10 @@ def build_message_link(chat_id: int, message_id: int) -> str:
     return f"https://t.me/c/{internal_chat_id}/{message_id}"
 
 
-def format_message_reference(chat_id: int, message_id: int, label: str = "сообщении") -> str:
-    return f"🔗 Где: <a href=\"{build_message_link(chat_id, message_id)}\">{label}</a>"
+def format_message_reference(
+    chat_id: int, message_id: int, label: str = "сообщение"
+) -> str:
+    return f'🔗 Где: <a href="{build_message_link(chat_id, message_id)}">{label}</a>'
 
 
 def format_user_left_message(user: ChatUser, moment: datetime) -> str:
@@ -33,7 +35,9 @@ def format_user_left_message(user: ChatUser, moment: datetime) -> str:
     )
 
 
-def format_user_kicked_message(user: ChatUser, admin: ChatUser, moment: datetime) -> str:
+def format_user_kicked_message(
+    user: ChatUser, admin: ChatUser, moment: datetime
+) -> str:
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
         f"🚪 <b>Администратор исключил пользователя из группы.</b>\n"
@@ -119,7 +123,11 @@ def format_user_restricted_message(
         if change_set.includes_admin_demotion
         else "Изменили права пользователя"
     )
-    details = "\n".join(change_set.lines) if change_set.lines else "Права администратора сняты."
+    details = (
+        "\n".join(change_set.lines)
+        if change_set.lines
+        else "Права администратора сняты."
+    )
 
     return (
         f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
@@ -143,6 +151,35 @@ def format_admin_promotion_message(
         f"🆔 ID: #id{user.id}\n\n"
         f"📋 Выданные права:\n{rights_text}\n\n"
         f"<b>#ВЫДАЛИ_ПРАВА_АДМИНИСТРАТОРА</b>"
+    )
+
+
+def format_admin_rights_changed_message(
+    user: ChatUser,
+    rights_changes: tuple[str, ...],
+    moment: datetime,
+) -> str:
+    details = "\n".join(rights_changes)
+    return (
+        f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
+        f"🛡 <b>Изменили права администратора.</b>\n"
+        f"👤 Пользователь: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"📋 Что изменилось:\n{details}\n\n"
+        f"<b>#ИЗМЕНИЛИ_ПРАВА_АДМИНИСТРАТОРА</b>"
+    )
+
+
+def format_admin_demotion_message(
+    user: ChatUser,
+    moment: datetime,
+) -> str:
+    return (
+        f"🕒 <b>{_format_timestamp(moment)}</b>\n\n"
+        f"🛡 <b>У пользователя сняли права администратора.</b>\n"
+        f"👤 Пользователь: {_format_user(user)}\n"
+        f"🆔 ID: #id{user.id}\n\n"
+        f"<b>#СНЯЛИ_ПРАВА_АДМИНИСТРАТОРА</b>"
     )
 
 

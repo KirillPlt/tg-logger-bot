@@ -39,7 +39,9 @@ class MessageStateMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         if event.edit_date is not None:
-            data["previous_message_snapshot"] = await self._message_snapshot_service.get(
+            data[
+                "previous_message_snapshot"
+            ] = await self._message_snapshot_service.get(
                 event.chat.id,
                 event.message_id,
             )

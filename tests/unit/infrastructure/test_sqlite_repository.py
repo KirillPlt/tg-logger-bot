@@ -1,10 +1,11 @@
 import aiosqlite
 
-from app.domain.models import BotRuntimeSettings, CustomCommand
+from app.domain.models import BotRuntimeSettings, CustomCommand, SavedNote
 from app.infrastructure.persistence import (
     SQLiteBotRuntimeSettingsRepository,
     SQLiteCustomCommandRepository,
     SQLiteDatabase,
+    SQLiteNoteRepository,
 )
 
 
@@ -65,7 +66,63 @@ async def test_sqlite_repository_persists_runtime_settings(tmp_path) -> None:
     default_settings = await repository.get()
     assert default_settings.reaction_logs_enabled is True
 
-    await repository.save(BotRuntimeSettings(reaction_logs_enabled=False))
+    await repository.save(
+        BotRuntimeSettings(
+            reaction_logs_enabled=False,
+            greeting_html="<b>Привет!</b>",
+        )
+    )
 
     updated_settings = await repository.get()
     assert updated_settings.reaction_logs_enabled is False
+    assert updated_settings.greeting_html == "<b>Привет!</b>"
+
+
+async def test_sqlite_repository_persists_notes(tmp_path) -> None:
+    database = SQLiteDatabase(tmp_path / "bot.db")
+    await database.initialize()
+    repository = SQLiteNoteRepository(database)
+    note = SavedNote(
+        normalized_name="наказание",
+        display_name="Наказание",
+        response_html="<b>Описание</b>",
+    )
+
+    await repository.upsert(note)
+
+    assert await repository.get_by_name("наказание") == note
+    assert await repository.list_notes() == [note]
+
+
+async def test_sqlite_database_migrates_runtime_settings_greeting_column(
+    tmp_path,
+) -> None:
+    database_path = tmp_path / "bot.db"
+
+    async with aiosqlite.connect(database_path) as connection:
+        await connection.execute(
+            """
+            CREATE TABLE bot_runtime_settings (
+                singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+                reaction_logs_enabled INTEGER NOT NULL DEFAULT 1 CHECK (reaction_logs_enabled IN (0, 1))
+            )
+            """
+        )
+        await connection.execute(
+            """
+            INSERT INTO bot_runtime_settings (singleton_id, reaction_logs_enabled)
+            VALUES (1, 1)
+            """
+        )
+        await connection.commit()
+
+    database = SQLiteDatabase(database_path)
+    await database.initialize()
+    repository = SQLiteBotRuntimeSettingsRepository(database)
+
+    await repository.save(
+        BotRuntimeSettings(reaction_logs_enabled=True, greeting_html="hello")
+    )
+    updated_settings = await repository.get()
+
+    assert updated_settings.greeting_html == "hello"

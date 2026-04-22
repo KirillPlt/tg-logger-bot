@@ -7,6 +7,7 @@ from app.domain.models.custom_command import (
 )
 from app.domain.models.chat_state import ChatState
 from app.domain.models.message_snapshot import MessageSnapshot
+from app.domain.models.saved_note import SavedNote
 
 __all__ = [
     "BotRuntimeSettings",
@@ -14,6 +15,7 @@ __all__ = [
     "CustomCommand",
     "MAX_CUSTOM_COMMAND_NAME_LENGTH",
     "MessageSnapshot",
+    "SavedNote",
     "normalize_command_name",
     "sanitize_command_name",
 ]

@@ -13,11 +13,19 @@ from aiogram.types import ChatMemberUpdated
 
 from app.application.protocols import Clock
 from app.config import Settings
-from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability import (
+    MetricsCollector,
+    get_logger,
+    log_step,
+    trace_handler,
+)
 from app.presentation.filters import ChatIdFilter
 from app.presentation.formatters import (
+    describe_admin_rights_changes,
     describe_restricted_rights_changes,
+    format_admin_demotion_message,
     format_admin_promotion_message,
+    format_admin_rights_changed_message,
     format_admin_rights,
     format_user_joined_message,
     format_user_kicked_message,
@@ -39,6 +47,7 @@ def create_member_event_router(settings: Settings) -> Router:
     logger = get_logger(__name__)
 
     @router.chat_member(ChatMemberUpdatedFilter(USER_LEFT_TRANSITION))
+    @trace_handler
     async def left_user_event(
         event: ChatMemberUpdated,
         bot: Bot,
@@ -67,6 +76,7 @@ def create_member_event_router(settings: Settings) -> Router:
         )
 
     @router.chat_member(ChatMemberUpdatedFilter(USER_KICKED_TRANSITION))
+    @trace_handler
     async def admin_kick_user_event(
         event: ChatMemberUpdated,
         bot: Bot,
@@ -97,6 +107,7 @@ def create_member_event_router(settings: Settings) -> Router:
         )
 
     @router.chat_member(ChatMemberUpdatedFilter(USER_JOINED_TRANSITION))
+    @trace_handler
     async def on_user_joined(
         event: ChatMemberUpdated,
         bot: Bot,
@@ -128,15 +139,113 @@ def create_member_event_router(settings: Settings) -> Router:
         )
 
     @router.chat_member()
-    async def restricted_user_event(
+    @trace_handler
+    async def member_rights_event(
         event: ChatMemberUpdated,
         bot: Bot,
         clock: Clock,
         metrics: MetricsCollector,
     ) -> None:
+        old_status = event.old_chat_member.status
+        new_status = event.new_chat_member.status
+
+        if new_status == ChatMemberStatus.ADMINISTRATOR:
+            started_at = perf_counter()
+            promoted_user = map_chat_user(event.new_chat_member.user)
+
+            if old_status != ChatMemberStatus.ADMINISTRATOR:
+                rights_text = format_admin_rights(event.new_chat_member)
+                metrics.observe_business_event("admin_promoted")
+
+                await bot.send_message(
+                    chat_id=settings.bot.log_chat_id,
+                    text=format_admin_promotion_message(
+                        user=promoted_user,
+                        rights_text=rights_text,
+                        moment=clock.now(),
+                    ),
+                )
+
+                await bot.send_message(
+                    chat_id=settings.bot.chat_id,
+                    text=(
+                        f"🛡 {promoted_user.mention_html}, тебе выдали права администратора.\n\n"
+                        "🔗 Вступи, пожалуйста, в наши служебные чаты по кнопкам ниже.\n"
+                        "🔐 Доступ туда открыт только для администрации."
+                    ),
+                    reply_markup=build_admin_invite_keyboard(settings),
+                )
+                metrics.observe_handler(
+                    handler="member_events.member_rights_event",
+                    status="success",
+                    duration_seconds=perf_counter() - started_at,
+                )
+                log_step(
+                    logger,
+                    "admin_promoted_logged",
+                    handler="member_events.member_rights_event",
+                    subject_user_id=event.new_chat_member.user.id,
+                )
+                return
+
+            rights_changes = describe_admin_rights_changes(
+                event.old_chat_member,
+                event.new_chat_member,
+            )
+            if rights_changes is None:
+                return
+
+            metrics.observe_business_event("admin_rights_changed")
+            await bot.send_message(
+                chat_id=settings.bot.log_chat_id,
+                text=format_admin_rights_changed_message(
+                    user=promoted_user,
+                    rights_changes=rights_changes,
+                    moment=clock.now(),
+                ),
+            )
+            metrics.observe_handler(
+                handler="member_events.member_rights_event",
+                status="success",
+                duration_seconds=perf_counter() - started_at,
+            )
+            log_step(
+                logger,
+                "admin_rights_changed_logged",
+                handler="member_events.member_rights_event",
+                subject_user_id=event.new_chat_member.user.id,
+            )
+            return
+
+        if old_status == ChatMemberStatus.ADMINISTRATOR:
+            if new_status == ChatMemberStatus.RESTRICTED:
+                pass
+            else:
+                started_at = perf_counter()
+                metrics.observe_business_event("admin_demoted")
+                await bot.send_message(
+                    chat_id=settings.bot.log_chat_id,
+                    text=format_admin_demotion_message(
+                        user=map_chat_user(event.new_chat_member.user),
+                        moment=clock.now(),
+                    ),
+                )
+                metrics.observe_handler(
+                    handler="member_events.member_rights_event",
+                    status="success",
+                    duration_seconds=perf_counter() - started_at,
+                )
+                log_step(
+                    logger,
+                    "admin_demoted_logged",
+                    handler="member_events.member_rights_event",
+                    subject_user_id=event.new_chat_member.user.id,
+                )
+                return
+
         if (
-            event.old_chat_member.status != ChatMemberStatus.RESTRICTED
-            and event.new_chat_member.status != ChatMemberStatus.RESTRICTED
+            old_status != ChatMemberStatus.RESTRICTED
+            and new_status != ChatMemberStatus.RESTRICTED
         ):
             return
 
@@ -158,62 +267,14 @@ def create_member_event_router(settings: Settings) -> Router:
             ),
         )
         metrics.observe_handler(
-            handler="member_events.restricted_user_event",
+            handler="member_events.member_rights_event",
             status="success",
             duration_seconds=perf_counter() - started_at,
         )
         log_step(
             logger,
             "user_restricted_logged",
-            handler="member_events.restricted_user_event",
-            subject_user_id=event.new_chat_member.user.id,
-        )
-
-    @router.chat_member()
-    async def admin_promoted_event(
-        event: ChatMemberUpdated,
-        bot: Bot,
-        clock: Clock,
-        metrics: MetricsCollector,
-    ) -> None:
-        if (
-            event.old_chat_member.status == ChatMemberStatus.ADMINISTRATOR
-            or event.new_chat_member.status != ChatMemberStatus.ADMINISTRATOR
-        ):
-            return
-
-        started_at = perf_counter()
-        promoted_user = map_chat_user(event.new_chat_member.user)
-        rights_text = format_admin_rights(event.new_chat_member)
-        metrics.observe_business_event("admin_promoted")
-
-        await bot.send_message(
-            chat_id=settings.bot.log_chat_id,
-            text=format_admin_promotion_message(
-                user=promoted_user,
-                rights_text=rights_text,
-                moment=clock.now(),
-            ),
-        )
-
-        await bot.send_message(
-            chat_id=settings.bot.chat_id,
-            text=(
-                f"🛡 {promoted_user.mention_html}, тебе выдали права администратора.\n\n"
-                "🔗 Вступи, пожалуйста, в наши служебные чаты по кнопкам ниже.\n"
-                "🔐 Доступ туда открыт только для администрации."
-            ),
-            reply_markup=build_admin_invite_keyboard(settings),
-        )
-        metrics.observe_handler(
-            handler="member_events.admin_promoted_event",
-            status="success",
-            duration_seconds=perf_counter() - started_at,
-        )
-        log_step(
-            logger,
-            "admin_promoted_logged",
-            handler="member_events.admin_promoted_event",
+            handler="member_events.member_rights_event",
             subject_user_id=event.new_chat_member.user.id,
         )
 

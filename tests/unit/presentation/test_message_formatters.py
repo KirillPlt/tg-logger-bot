@@ -9,8 +9,11 @@ from app.presentation.formatters import (
     RESTRICTED_RIGHTS_TITLES,
     build_chat_deep_link,
     build_message_link,
+    describe_admin_rights_changes,
     describe_restricted_rights_changes,
+    format_admin_demotion_message,
     format_message_reference,
+    format_admin_rights_changed_message,
     format_user_left_message,
     format_user_restricted_message,
 )
@@ -39,7 +42,9 @@ def test_format_message_reference_renders_clickable_message_link() -> None:
 
 
 def test_format_user_left_message_contains_user_and_hashtag() -> None:
-    user = ChatUser(id=77, mention_html="<a href='tg://user?id=77'>User</a>", username="tester")
+    user = ChatUser(
+        id=77, mention_html="<a href='tg://user?id=77'>User</a>", username="tester"
+    )
     moment = datetime(2026, 4, 15, 12, 30, tzinfo=ZoneInfo("Europe/Moscow"))
 
     rendered_message = format_user_left_message(user, moment)
@@ -72,7 +77,9 @@ def test_format_user_restricted_message_uses_change_set() -> None:
     assert "#id9" in rendered_message
 
 
-def test_describe_restricted_rights_changes_shows_revoked_permission_for_member_to_restricted() -> None:
+def test_describe_restricted_rights_changes_shows_revoked_permission_for_member_to_restricted() -> (
+    None
+):
     old_member = SimpleNamespace(status=ChatMemberStatus.MEMBER)
     new_member = _build_restricted_member(
         can_send_messages=False,
@@ -84,7 +91,9 @@ def test_describe_restricted_rights_changes_shows_revoked_permission_for_member_
     assert change_set.lines == ("Отправлять сообщения: ✅ → ❌",)
 
 
-def test_describe_restricted_rights_changes_shows_restored_permission_for_restricted_to_member() -> None:
+def test_describe_restricted_rights_changes_shows_restored_permission_for_restricted_to_member() -> (
+    None
+):
     old_member = _build_restricted_member(
         can_send_messages=False,
     )
@@ -94,3 +103,46 @@ def test_describe_restricted_rights_changes_shows_restored_permission_for_restri
 
     assert change_set is not None
     assert change_set.lines == ("Отправлять сообщения: ❌ → ✅",)
+
+
+def test_describe_admin_rights_changes_shows_changed_permission_for_admin() -> None:
+    old_member = SimpleNamespace(
+        status=ChatMemberStatus.ADMINISTRATOR,
+        can_delete_messages=False,
+        can_manage_chat=True,
+    )
+    new_member = SimpleNamespace(
+        status=ChatMemberStatus.ADMINISTRATOR,
+        can_delete_messages=True,
+        can_manage_chat=True,
+    )
+
+    change_set = describe_admin_rights_changes(old_member, new_member)
+
+    assert change_set == ("Удаление сообщений: ❌ → ✅",)
+
+
+def test_format_admin_rights_changed_message_renders_diff_lines() -> None:
+    user = ChatUser(id=12, mention_html="<b>Admin</b>", username="chief")
+
+    rendered_message = format_admin_rights_changed_message(
+        user=user,
+        rights_changes=("Удаление сообщений: ❌ → ✅",),
+        moment=datetime(2026, 4, 15, 12, 30, tzinfo=ZoneInfo("Europe/Moscow")),
+    )
+
+    assert "Изменили права администратора" in rendered_message
+    assert "Удаление сообщений: ❌ → ✅" in rendered_message
+    assert "#id12" in rendered_message
+
+
+def test_format_admin_demotion_message_renders_expected_title() -> None:
+    user = ChatUser(id=13, mention_html="<b>User</b>", username=None)
+
+    rendered_message = format_admin_demotion_message(
+        user=user,
+        moment=datetime(2026, 4, 15, 12, 30, tzinfo=ZoneInfo("Europe/Moscow")),
+    )
+
+    assert "сняли права администратора" in rendered_message.lower()
+    assert "#id13" in rendered_message

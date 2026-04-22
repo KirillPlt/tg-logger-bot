@@ -15,7 +15,9 @@ def get_log_context() -> dict[str, object]:
 
 def set_log_context(**context: object) -> Token[dict[str, object]]:
     current_context = get_log_context()
-    current_context.update({key: value for key, value in context.items() if value is not None})
+    current_context.update(
+        {key: value for key, value in context.items() if value is not None}
+    )
     return _LOG_CONTEXT.set(current_context)
 
 
@@ -25,4 +27,3 @@ def update_log_context(context: Mapping[str, object]) -> Token[dict[str, object]
 
 def clear_log_context(token: Token[dict[str, object]]) -> None:
     _LOG_CONTEXT.reset(token)
-

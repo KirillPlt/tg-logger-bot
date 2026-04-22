@@ -17,7 +17,12 @@ from aiogram.types import (
 from app.application.protocols import Clock
 from app.application.services import BotRuntimeSettingsService
 from app.config import Settings
-from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability import (
+    MetricsCollector,
+    get_logger,
+    log_step,
+    trace_handler,
+)
 from app.presentation.filters import ChatIdFilter
 from app.presentation.formatters import format_message_reference
 
@@ -32,6 +37,7 @@ def create_system_update_router(settings: Settings) -> Router:
     logger = get_logger(__name__)
 
     @router.message_reaction()
+    @trace_handler
     async def message_reaction_event(
         event: MessageReactionUpdated,
         bot: Bot,
@@ -93,6 +99,7 @@ def create_system_update_router(settings: Settings) -> Router:
         )
 
     @router.message_reaction_count()
+    @trace_handler
     async def message_reaction_count_event(
         event: MessageReactionCountUpdated,
         bot: Bot,
@@ -115,10 +122,13 @@ def create_system_update_router(settings: Settings) -> Router:
             )
             return
 
-        reactions_summary = ", ".join(
-            f"{_reaction_type_to_text(reaction.type)} x{reaction.total_count}"
-            for reaction in event.reactions
-        ) or "😶 Нет реакций"
+        reactions_summary = (
+            ", ".join(
+                f"{_reaction_type_to_text(reaction.type)} x{reaction.total_count}"
+                for reaction in event.reactions
+            )
+            or "😶 Нет реакций"
+        )
         await bot.send_message(
             chat_id=settings.bot.log_chat_id,
             text=(
@@ -138,6 +148,7 @@ def create_system_update_router(settings: Settings) -> Router:
         )
 
     @router.chat_boost()
+    @trace_handler
     async def chat_boost_event(
         event: ChatBoostUpdated,
         bot: Bot,
@@ -165,6 +176,7 @@ def create_system_update_router(settings: Settings) -> Router:
         )
 
     @router.removed_chat_boost()
+    @trace_handler
     async def removed_chat_boost_event(
         event: ChatBoostRemoved,
         bot: Bot,
@@ -193,6 +205,7 @@ def create_system_update_router(settings: Settings) -> Router:
         )
 
     @router.my_chat_member()
+    @trace_handler
     async def bot_chat_member_event(
         event: ChatMemberUpdated,
         bot: Bot,
@@ -243,7 +256,7 @@ def _reaction_type_to_text(reaction: object) -> str:
 
     custom_emoji_id = getattr(reaction, "custom_emoji_id", None)
     if custom_emoji_id is not None:
-        return f"<tg-emoji emoji-id=\"{custom_emoji_id}\"></tg-emoji>"
+        return f'<tg-emoji emoji-id="{custom_emoji_id}"></tg-emoji>'
 
     is_paid = getattr(reaction, "type", None)
     if is_paid == "paid":

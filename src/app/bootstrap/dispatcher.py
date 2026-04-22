@@ -2,7 +2,10 @@ from aiogram import Dispatcher
 
 from app.bootstrap.container import ApplicationContainer
 from app.config import Settings
-from app.presentation.middlewares import MessageStateMiddleware, UpdateObservabilityMiddleware
+from app.presentation.middlewares import (
+    MessageStateMiddleware,
+    UpdateObservabilityMiddleware,
+)
 from app.presentation.routers import (
     create_custom_command_router,
     create_join_request_router,
@@ -14,18 +17,26 @@ from app.presentation.routers import (
 )
 
 
-def create_dispatcher(settings: Settings, container: ApplicationContainer) -> Dispatcher:
+def create_dispatcher(
+    settings: Settings, container: ApplicationContainer
+) -> Dispatcher:
     dispatcher = Dispatcher()
     dispatcher.workflow_data.update(
         {
             "clock": container.clock,
             "custom_command_service": container.custom_command_service,
+            "note_service": container.note_service,
             "admin_access_service": container.admin_access_service,
             "bot_runtime_settings_service": container.bot_runtime_settings_service,
             "metrics": container.metrics,
         }
     )
-    dispatcher.update.outer_middleware(UpdateObservabilityMiddleware(container.metrics))
+    dispatcher.update.outer_middleware(
+        UpdateObservabilityMiddleware(
+            container.metrics,
+            tracing_enabled=settings.tracing.enabled,
+        )
+    )
     message_state_middleware = MessageStateMiddleware(
         settings=settings,
         message_snapshot_service=container.message_snapshot_service,

@@ -3,7 +3,11 @@ from dataclasses import dataclass
 from time import perf_counter
 
 from app.application.protocols import CustomCommandRepository
-from app.domain.models import CustomCommand, normalize_command_name, sanitize_command_name
+from app.domain.models import (
+    CustomCommand,
+    normalize_command_name,
+    sanitize_command_name,
+)
 from app.infrastructure.observability import MetricsCollector, get_logger, log_step
 
 
@@ -32,7 +36,10 @@ class CustomCommandService:
     async def list_commands(self) -> tuple[CustomCommand, ...]:
         await self._ensure_cache()
         return tuple(
-            sorted(self._cache.values(), key=lambda command: command.display_name.casefold())
+            sorted(
+                self._cache.values(),
+                key=lambda command: command.display_name.casefold(),
+            )
         )
 
     async def resolve(self, raw_name: str) -> CustomCommand | None:
@@ -133,10 +140,7 @@ class CustomCommandService:
                 return
 
             commands = await self._repository.list_commands()
-            self._cache = {
-                command.normalized_name: command
-                for command in commands
-            }
+            self._cache = {command.normalized_name: command for command in commands}
             self._cache_ready = True
             log_step(
                 self._logger,

@@ -29,7 +29,42 @@ class BotRuntimeSettingsService:
         settings = await self.get()
         return settings.reaction_logs_enabled
 
-    async def set_reaction_logging_enabled(self, enabled: bool) -> tuple[BotRuntimeSettings, bool]:
+    async def get_greeting(self) -> str | None:
+        settings = await self.get()
+        return settings.greeting_html
+
+    async def set_greeting(self, greeting_html: str) -> tuple[BotRuntimeSettings, bool]:
+        started_at = perf_counter()
+        cleaned_greeting = greeting_html.strip()
+        if not cleaned_greeting:
+            raise ValueError("Текст приветствия не может быть пустым.")
+
+        current_settings = await self.get()
+        was_changed = current_settings.greeting_html != cleaned_greeting
+        updated_settings = replace(current_settings, greeting_html=cleaned_greeting)
+        await self._repository.save(updated_settings)
+        self._cached_settings = updated_settings
+
+        if self._metrics is not None:
+            if was_changed:
+                self._metrics.observe_business_event("greeting_updated")
+            self._metrics.observe_handler(
+                handler="bot_runtime_settings_service.set_greeting",
+                status="success" if was_changed else "unchanged",
+                duration_seconds=perf_counter() - started_at,
+            )
+
+        log_step(
+            self._logger,
+            "greeting_setting_updated",
+            handler="bot_runtime_settings_service.set_greeting",
+            changed=was_changed,
+        )
+        return updated_settings, was_changed
+
+    async def set_reaction_logging_enabled(
+        self, enabled: bool
+    ) -> tuple[BotRuntimeSettings, bool]:
         started_at = perf_counter()
         current_settings = await self.get()
         was_changed = current_settings.reaction_logs_enabled != enabled
@@ -78,4 +113,5 @@ class BotRuntimeSettingsService:
                 "bot_runtime_settings_cache_primed",
                 cache_name="bot_runtime_settings",
                 reaction_logs_enabled=self._cached_settings.reaction_logs_enabled,
+                has_greeting=self._cached_settings.greeting_html is not None,
             )

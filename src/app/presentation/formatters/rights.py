@@ -47,10 +47,27 @@ class RestrictedRightsChangeSet:
     includes_admin_demotion: bool
 
 
+def describe_admin_rights_changes(
+    old_member: Any,
+    new_member: Any,
+) -> tuple[str, ...] | None:
+    lines: list[str] = []
+
+    for title in _iter_admin_right_change_lines(old_member, new_member):
+        lines.append(title)
+
+    if not lines:
+        return None
+
+    return tuple(lines)
+
+
 def format_admin_rights(member: Any) -> str:
     lines = []
 
-    for index, (attribute_name, title) in enumerate(ADMIN_RIGHTS_TITLES.items(), start=1):
+    for index, (attribute_name, title) in enumerate(
+        ADMIN_RIGHTS_TITLES.items(), start=1
+    ):
         value = bool(getattr(member, attribute_name, False))
         lines.append(f"{index}. {title}: {'✅' if value else '❌'}")
 
@@ -119,3 +136,18 @@ def _resolve_restricted_right_value(member: Any, attribute_name: str) -> bool | 
 
 def _format_restricted_right_state(value: bool | None) -> str:
     return "✅" if value else "❌"
+
+
+def _iter_admin_right_change_lines(old_member: Any, new_member: Any) -> list[str]:
+    lines: list[str] = []
+
+    for attribute_name, title in ADMIN_RIGHTS_TITLES.items():
+        old_value = bool(getattr(old_member, attribute_name, False))
+        new_value = bool(getattr(new_member, attribute_name, False))
+        if old_value == new_value:
+            continue
+        lines.append(
+            f"{title}: {'✅' if old_value else '❌'} → {'✅' if new_value else '❌'}"
+        )
+
+    return lines

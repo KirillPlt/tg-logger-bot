@@ -6,7 +6,12 @@ from aiogram.types import Message
 
 from app.application.services import BotRuntimeSettingsService
 from app.config import Settings
-from app.infrastructure.observability import MetricsCollector, get_logger, log_step
+from app.infrastructure.observability import (
+    MetricsCollector,
+    get_logger,
+    log_step,
+    trace_handler,
+)
 from app.presentation.filters import OwnerFilter
 
 
@@ -23,14 +28,20 @@ def create_runtime_control_router(settings: Settings) -> Router:
         owner_filter,
         F.chat.type.in_(ALLOWED_CHAT_TYPES),
     )
+    @trace_handler
     async def enable_reaction_logs_handler(
         message: Message,
         bot_runtime_settings_service: BotRuntimeSettingsService,
         metrics: MetricsCollector,
     ) -> None:
         started_at = perf_counter()
-        _, was_changed = await bot_runtime_settings_service.set_reaction_logging_enabled(True)
-        await message.answer(_format_reaction_logging_toggle_response(True, was_changed))
+        (
+            _,
+            was_changed,
+        ) = await bot_runtime_settings_service.set_reaction_logging_enabled(True)
+        await message.answer(
+            _format_reaction_logging_toggle_response(True, was_changed)
+        )
         metrics.observe_handler(
             handler="runtime_controls.enable_reaction_logs_handler",
             status="success" if was_changed else "unchanged",
@@ -40,7 +51,9 @@ def create_runtime_control_router(settings: Settings) -> Router:
             logger,
             "reaction_logs_enabled_command_processed",
             handler="runtime_controls.enable_reaction_logs_handler",
-            actor_user_id=message.from_user.id if message.from_user is not None else None,
+            actor_user_id=message.from_user.id
+            if message.from_user is not None
+            else None,
             changed=was_changed,
         )
 
@@ -49,14 +62,20 @@ def create_runtime_control_router(settings: Settings) -> Router:
         owner_filter,
         F.chat.type.in_(ALLOWED_CHAT_TYPES),
     )
+    @trace_handler
     async def disable_reaction_logs_handler(
         message: Message,
         bot_runtime_settings_service: BotRuntimeSettingsService,
         metrics: MetricsCollector,
     ) -> None:
         started_at = perf_counter()
-        _, was_changed = await bot_runtime_settings_service.set_reaction_logging_enabled(False)
-        await message.answer(_format_reaction_logging_toggle_response(False, was_changed))
+        (
+            _,
+            was_changed,
+        ) = await bot_runtime_settings_service.set_reaction_logging_enabled(False)
+        await message.answer(
+            _format_reaction_logging_toggle_response(False, was_changed)
+        )
         metrics.observe_handler(
             handler="runtime_controls.disable_reaction_logs_handler",
             status="success" if was_changed else "unchanged",
@@ -66,7 +85,9 @@ def create_runtime_control_router(settings: Settings) -> Router:
             logger,
             "reaction_logs_disabled_command_processed",
             handler="runtime_controls.disable_reaction_logs_handler",
-            actor_user_id=message.from_user.id if message.from_user is not None else None,
+            actor_user_id=message.from_user.id
+            if message.from_user is not None
+            else None,
             changed=was_changed,
         )
 
